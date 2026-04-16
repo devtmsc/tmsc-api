@@ -1,0 +1,4 @@
+[submodule "fastcore"]
+	path = fastcore
+	url = https://github.com/devtmsc/fastcore.git
+	branch = main
