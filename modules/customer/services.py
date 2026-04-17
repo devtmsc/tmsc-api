@@ -137,7 +137,7 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
         data = CustomerSerializer.serialize_list([customer], context={'commune_cache': commune_cache},
                                                  fields=['id', 'fullname', 'phone', 'email', 'address', 'province_code', 'commune_code', 'status', 'birthday', 'avatar_url', 'channel', 'channel_name', 'commune_name', 'province_name', 'created_time', 'created_time_ago', 'birthday', 'reward_points'])
 
-        return {'code': MSG['200']['code'], 'message': MSG['200']['status_code'], 'data': data[0]}
+        return {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': data[0]}
     except HTTPException as e:
         raise e
     except Exception as e:
