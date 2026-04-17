@@ -25,6 +25,7 @@ class SocialCustomersModel(Base):
     avatar_url: Mapped[str] = mapped_column(String(255))
     phone: Mapped[str] = mapped_column(String(30))
     email: Mapped[str] = mapped_column(String(100))
+    channel: Mapped[int] = mapped_column(Integer)
     
     customer: Mapped["CustomersModel"] = relationship(back_populates="social")
     

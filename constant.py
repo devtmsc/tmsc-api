@@ -1,1 +1,3 @@
-FIELD_NAME = {}
+FIELD_NAME = {
+    'provider': 'Nhà cung cấp'
+}

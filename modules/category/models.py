@@ -14,7 +14,7 @@ class CommuneModel(Base):
     __table_args__ = {"schema": "category"}
     
     code: Mapped[str] = mapped_column(primary_key=True)
-    province_code = Mapped[str] = mapped_column(ForeignKey('category.province.code'))
+    province_code: Mapped[str] = mapped_column(ForeignKey('category.province.code'))
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(String(255))
     synonym: Mapped[list[str]] = mapped_column(ARRAY(String))
