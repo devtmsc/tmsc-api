@@ -50,6 +50,7 @@ class CustomersModel(Base):
     birthday: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     avatar_url: Mapped[str] = mapped_column(String(255))
     channel: Mapped[int] = mapped_column(Integer)
+    reward_points: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
