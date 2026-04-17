@@ -102,8 +102,7 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
                             fullname=f"{info.first_name} {info.last_name}", phone=phone, channel=1, status=True, social=[social_customer])
                         db.add(customer)
                 else:
-                    raise HTTPException(status_code=422, detail={
-                                        'code': MSG['422']['status_code'], 'message': 'Dữ liệu không hợp lệ, bạn chưa truyền số điện thoại'})
+                    raise HTTPException(status_code=422, detail={'code': MSG['422']['status_code'], 'message': 'Dữ liệu không hợp lệ, bạn chưa truyền số điện thoại'})
 
         if not customer:
             raise HTTPException(status_code=404, detail={
@@ -138,9 +137,9 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
         data = CustomerSerializer.serialize_list([customer], context={'commune_cache': commune_cache},
                                                  fields=['id', 'fullname', 'phone', 'email', 'address', 'province_code', 'commune_code', 'status', 'birthday', 'avatar_url', 'channel', 'channel_name', 'commune_name', 'province_name', 'created_time', 'created_time_ago', 'birthday', 'reward_points'])
 
-        return {'code': MSG['200']['status_code'], 'message': MSG['200']['status_code'], 'data': data[0]}
+        return {'code': MSG['200']['code'], 'message': MSG['200']['status_code'], 'data': data[0]}
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail={
-                            'code': MSG['500']['status_code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+                            'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
