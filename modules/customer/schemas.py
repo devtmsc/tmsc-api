@@ -24,3 +24,10 @@ class CustomerLoginSchema(DRFStyleBaseModel):
     commune_code: Optional[str] = DRFCharField('commune_code', max_length=20, required=False, blank=True)
     address: Optional[str] = DRFCharField('address', max_length=255, required=False, blank=True)
     birthday: Optional[datetime] = DRFDateTimeField('created_from', required=False)
+    
+    
+class SocialCustomerDeleteSchema(DRFStyleBaseModel):
+    channel: int = DRFIntField('channel', required=True)
+    provider: int = DRFIntField('provider', required=True)
+    provider_id: str = DRFCharField('provider_id', max_length=255, required=True, blank=False)
+    customer_id: int = DRFIntField('customer_id', required=True)

@@ -172,3 +172,21 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
     except Exception as e:
         raise HTTPException(status_code=500, detail={
                             'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+
+
+@router.delete("/social", name="delete")
+def delete_social(info: schemas.SocialCustomerDeleteSchema, db: Session = Depends(get_customer_master_db), api_key: str = Depends(verify_api_key)):
+    try:
+        social_customer = db.query(SocialCustomersModel).filter(SocialCustomersModel.provider == info.provider, SocialCustomersModel.provider_id == info.provider_id, 
+                                                                SocialCustomersModel.channel == info.channel, SocialCustomersModel.customer_id == info.customer_id).first()
+        if not social_customer:
+            raise HTTPException(status_code=404, detail={
+                                            'code': MSG['404']['status_code'], 'message': 'Tài khoản liên kết không tồn tại'})
+        db.delete(social_customer)
+        db.commit()
+        return {'code': MSG['200']['code'], 'message': MSG['200']['message']}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500,
+                            detail={'code': MSG['500']['status_code'], 'message': MSG['500']['message'], 'system_message': str(e)})
