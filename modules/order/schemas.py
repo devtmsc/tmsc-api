@@ -29,3 +29,16 @@ class OrderCreateSchema(DRFStyleBaseModel):
     reward_id: Optional[int] = DRFIntField('reward_id', required=False)
     reward_value: Optional[int] = DRFIntField('reward_value', required=False)
     items: Optional[list[OrderItemsSchema]] = DRFListField('items', required=False)
+    delivery_method: Optional[int] = DRFIntField('delivery_method', required=False, default=1)
+    pickup_scheduled_at: Optional[datetime] = DRFDateTimeField('pickup_datetime', required=False)
+
+
+class OrderListSchema(DRFStyleBaseModel):
+    channel: int = DRFIntField('channel', required=True)
+    customer_id: int = DRFIntField('customer_id', required=True)
+    page: int = DRFIntField('page', required=True)
+    page_size: int = DRFIntField('page_size', required=False, default=10)
+    tracking_code: Optional[str] = DRFCharField('title', max_length=255, required=False, blank=True)
+    status: Optional[int] = DRFIntField('status', required=False)
+    created_from: Optional[datetime] = DRFDateTimeField('created_from', required=True)
+    created_to: Optional[datetime] = DRFDateTimeField('created_to', required=True)

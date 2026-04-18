@@ -47,6 +47,8 @@ class OrdersModel(SoftDeleteMixin, Base):
     reward_redemptions_id: Mapped[int] = mapped_column(Integer)
     channel: Mapped[str] = mapped_column(String(100))
     items: Mapped[dict] = mapped_column(JSONB)
+    delivery_method: Mapped[int] = mapped_column(Integer)
+    pickup_scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     returned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     canceled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

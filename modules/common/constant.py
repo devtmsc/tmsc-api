@@ -30,3 +30,8 @@ ORDER_STATUS_MAPPING = {
     'CANCELLED': 8,
     'PAID': 9
 }
+
+DELIVERY_METHOD = {
+    1: {'id': 1, 'name': 'Giao hàng tận nhà'},
+    2: {'id': 2, 'name': 'Lấy hàng tại công ty'}
+}
