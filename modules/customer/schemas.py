@@ -42,3 +42,8 @@ class ListSchema(DRFStyleBaseModel):
     status: Optional[int] = DRFIntField('status', required=False)
     created_from: Optional[datetime] = DRFDateTimeField('created_from', required=True)
     created_to: Optional[datetime] = DRFDateTimeField('created_to', required=True)
+    
+    
+class RewardSchema(DRFStyleBaseModel):
+    page: int = DRFIntField('page', required=True)
+    page_size: int = DRFIntField('page_size', required=False, default=10)

@@ -75,6 +75,8 @@ class RewardsModel(SoftDeleteMixin, Base):
     stock: Mapped[int] = mapped_column(Integer)
     image: Mapped[str] = mapped_column(String(255))
     status: Mapped[bool] = mapped_column(Boolean)
+    available_from: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    available_to: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

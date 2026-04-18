@@ -1,6 +1,8 @@
 import math
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import or_
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db
 from app.fastcore.common.constant import MSG
 from app.modules.common.utility import normalize_phone_lib
@@ -269,3 +271,35 @@ def get_list_transaction(request: Request, filter: schemas.ListSchema = Depends(
     except Exception as e:
         raise HTTPException(status_code=500, detail={
                             'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+        
+
+@router.get("/list-reward", name="list")
+def get_list_reward(filter: schemas.RewardSchema = Depends(), db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key)):
+    try:
+        now = datetime.now(timezone.utc)
+        query = db.query(RewardsModel).filter(
+                    RewardsModel.available_from <= now,
+                    or_(
+                        RewardsModel.available_to == None,
+                        RewardsModel.available_to >= now
+                    )
+                ).filter(RewardsModel.status.is_(True), RewardsModel.stock > 0)
+        
+        total = query.count()  # tổng record
+        data = query.order_by(RewardsModel.created_at.desc()).offset((filter.page - 1) * filter.page_size).limit(filter.page_size).all()
+
+        return {'code': MSG['200']['code'], 'message': MSG['200']['message'],
+                "data": ListSerializer.serialize_list(data),
+                "pagination": {
+                    "page": filter.page,
+                    "limit": filter.page_size,
+                    "total": total,
+                    "total_pages": math.ceil(total/filter.page_size)
+                }
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={
+                            'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+
