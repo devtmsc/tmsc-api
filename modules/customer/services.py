@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db
 from app.fastcore.common.constant import MSG
 from app.modules.common.utility import normalize_phone_lib
@@ -55,6 +55,10 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
             # khách đăng ký
             customer = db.query(CustomersModel).filter(
                 CustomersModel.id == info.customer_id, CustomersModel.channel == info.channel).first()
+            if not customer:
+                raise HTTPException(status_code=404, detail={
+                                    'code': MSG['404']['status_code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
+
             is_existed = True
         else:
             # khách đăng nhập qua FB, Gmail
@@ -62,10 +66,20 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
                                                                     SocialCustomersModel.provider_id == info.provider_id, SocialCustomersModel.channel == info.channel).first()
             if social_customer:
                 # Đã có tài khoản
+                if info.customer_id:
+                    # có truyền info.customer_id là liên kết tài khoản với customer_id này.
+                    if info.customer_id != social_customer.customer_id:
+                        # đã liên kết với 1 tài khoản khác
+                        raise HTTPException(status_code=400, detail={
+                                            'code': MSG['400']['status_code'], 'message': 'Tài khoản Gmail/Facebook của bạn đã được liên kết với 1 tài khoản khác của hệ thống!'})
+
                 customer = db.query(CustomersModel).filter(
                     CustomersModel.id == social_customer.customer_id, CustomersModel.channel == info.channel).first()
-                is_existed = True
+                if not customer:
+                    raise HTTPException(status_code=404, detail={
+                                        'code': MSG['404']['status_code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
 
+                is_existed = True
                 if info.nickname:
                     social_customer.nickname = info.nickname
 
@@ -85,28 +99,38 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
                     social_customer.email = info.email
 
             else:
-                if phone:
+                if info.customer_id:
+                    # có truyền info.customer_id là liên kết tài khoản với customer_id này.
                     customer = db.query(CustomersModel).filter(
-                        CustomersModel.phone == phone, CustomersModel.channel == info.channel).first()
-                    if customer:
-                        # sdt đã có tài khoản
+                        CustomersModel.id == info.customer_id, CustomersModel.channel == info.channel).first()
+                    if not customer:
+                        raise HTTPException(status_code=404, detail={
+                                            'code': MSG['404']['status_code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
+                    else:
                         social_customer = SocialCustomersModel(channel=info.channel, provider=info.provider, provider_id=info.provider_id, customer_id=customer.id, nickname=info.nickname, first_name=info.first_name,
                                                                last_name=info.last_name, avatar_url=info.avatar_url, phone=info.phone, email=info.email)
-                    else:
-                        # sdt chưa có tài khoản, tạo mới
-                        social_customer = SocialCustomersModel(channel=info.channel, provider=info.provider, provider_id=info.provider_id, nickname=info.nickname, first_name=info.first_name,
-                                                               last_name=info.last_name, avatar_url=info.avatar_url, phone=info.phone, email=info.email)
-
-                        # Chưa có tài khoản
-                        customer = CustomersModel(
-                            fullname=f"{info.first_name} {info.last_name}", phone=phone, channel=1, status=True, social=[social_customer])
-                        db.add(customer)
+                        db.add(social_customer)
                 else:
-                    raise HTTPException(status_code=422, detail={'code': MSG['422']['status_code'], 'message': 'Dữ liệu không hợp lệ, bạn chưa truyền số điện thoại'})
+                    if phone:
+                        customer = db.query(CustomersModel).filter(
+                            CustomersModel.phone == phone, CustomersModel.channel == info.channel).first()
+                        if customer:
+                            # sdt đã có tài khoản
+                            social_customer = SocialCustomersModel(channel=info.channel, provider=info.provider, provider_id=info.provider_id, customer_id=customer.id, nickname=info.nickname, first_name=info.first_name,
+                                                                   last_name=info.last_name, avatar_url=info.avatar_url, phone=info.phone, email=info.email)
+                            db.add(social_customer)
+                        else:
+                            # sdt chưa có tài khoản, tạo mới
+                            social_customer = SocialCustomersModel(channel=info.channel, provider=info.provider, provider_id=info.provider_id, nickname=info.nickname, first_name=info.first_name,
+                                                                   last_name=info.last_name, avatar_url=info.avatar_url, phone=info.phone, email=info.email)
 
-        if not customer:
-            raise HTTPException(status_code=404, detail={
-                                'code': MSG['404']['status_code'], 'message': 'Tài khoản khách hàng không tồn tại'})
+                            # Chưa có tài khoản
+                            customer = CustomersModel(
+                                fullname=f"{info.first_name} {info.last_name}", phone=phone, channel=1, status=True, social=[social_customer])
+                            db.add(customer)
+                    else:
+                        raise HTTPException(status_code=422, detail={
+                                            'code': MSG['422']['status_code'], 'message': 'Dữ liệu không hợp lệ, bạn chưa truyền số điện thoại'})
 
         if is_existed:
             # đã tồn tại thì update lại thông tin
@@ -131,11 +155,16 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
             if info.birthday:
                 customer.birthday = info.birthday
 
-            db.commit()
-            db.refresh(customer)
+        db.commit()
+        db.refresh(customer)
 
-        data = CustomerSerializer.serialize_list([customer], context={'commune_cache': commune_cache},
-                                                 fields=['id', 'fullname', 'phone', 'email', 'address', 'province_code', 'commune_code', 'status', 'birthday', 'avatar_url', 'channel', 'channel_name', 'commune_name', 'province_name', 'created_time', 'created_time_ago', 'birthday', 'reward_points'])
+        customer_data = db.query(CustomersModel).filter(
+            CustomersModel.id == customer.id).options(selectinload(CustomersModel.social)).all()
+
+        data = CustomerSerializer.serialize_list(customer_data, context={'commune_cache': commune_cache},
+                                                 fields=['id', 'fullname', 'phone', 'email', 'address', 'province_code', 'commune_code', 'status',
+                                                         'birthday', 'avatar_url', 'channel', 'channel_name', 'commune_name', 'province_name',
+                                                         'created_time', 'created_time_ago', 'birthday', 'reward_points', 'social'])
 
         return {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': data[0]}
     except HTTPException as e:

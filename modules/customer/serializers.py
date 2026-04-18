@@ -4,6 +4,19 @@ from app.fastcore.common.utility import to_dict, get_field_value, update_field_v
 from app.modules.common.constant import CUSTOMER_CHANNEL
 
 
+def detail_to_dict(obj):
+    data = {
+        c.name: getattr(obj, c.name)
+        for c in obj.__table__.columns
+    }
+
+    # thêm relationship
+    if hasattr(obj, "social"):
+        data["social"] = [detail_to_dict(d) for d in obj.social]
+        
+    return data
+
+
 class CustomerSerializer:
     @classmethod
     def serialize_list(cls, objects: List[Any] = [], context: dict = None, fields: List[str] = None):
@@ -11,7 +24,7 @@ class CustomerSerializer:
         commune_cache = context['commune_cache']().get()
 
         for item in objects:
-            item = to_dict(item)
+            item = detail_to_dict(item)
 
             commune_code = get_field_value(item, 'commune_code')
             update_field_value(item, 'commune_name', get_value_from_dict(dictionary=commune_cache, key_path=commune_code, default={}).get('name', ''))
