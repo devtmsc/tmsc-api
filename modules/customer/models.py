@@ -11,7 +11,7 @@ class Base(DeclarativeBase):
     pass
 
 
-class SocialCustomersModel(Base):
+class SocialCustomersModel(SoftDeleteMixin, Base):
     __tablename__ = "social_customers"
     __table_args__ = {"schema": "customer"}
     
@@ -26,6 +26,8 @@ class SocialCustomersModel(Base):
     phone: Mapped[str] = mapped_column(String(30))
     email: Mapped[str] = mapped_column(String(100))
     channel: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     customer: Mapped["CustomersModel"] = relationship(back_populates="social")
     
@@ -34,7 +36,7 @@ class SocialCustomersModel(Base):
     }
     
 
-class CustomersModel(Base):
+class CustomersModel(SoftDeleteMixin, Base):
     __tablename__ = "customers"
     __table_args__ = {"schema": "customer"}
     
