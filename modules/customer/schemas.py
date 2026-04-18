@@ -31,3 +31,14 @@ class SocialCustomerDeleteSchema(DRFStyleBaseModel):
     provider: int = DRFIntField('provider', required=True)
     provider_id: str = DRFCharField('provider_id', max_length=255, required=True, blank=False)
     customer_id: int = DRFIntField('customer_id', required=True)
+
+
+class ListSchema(DRFStyleBaseModel):
+    channel: int = DRFIntField('channel', required=True)
+    customer_id: int = DRFIntField('customer_id', required=True)
+    page: int = DRFIntField('page', required=True)
+    page_size: int = DRFIntField('page_size', required=False, default=10)
+    code: Optional[str] = DRFCharField('title', max_length=255, required=False, blank=True)
+    status: Optional[int] = DRFIntField('status', required=False)
+    created_from: Optional[datetime] = DRFDateTimeField('created_from', required=True)
+    created_to: Optional[datetime] = DRFDateTimeField('created_to', required=True)

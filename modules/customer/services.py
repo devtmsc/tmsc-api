@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+import math
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, selectinload
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db
 from app.fastcore.common.constant import MSG
 from app.modules.common.utility import normalize_phone_lib
+from app.fastcore.common.utility import to_end_of_day
 from app.fastcore.user.auth_with_api_key import verify_api_key
-from .models import CustomersModel, SocialCustomersModel
-from .serializers import CustomerSerializer
+from .models import CustomersModel, SocialCustomersModel, RewardRedemptionsModel, RewardTransactionsModel, RewardsModel
+from .serializers import CustomerSerializer, RewardRedemptionsSerializer
+from app.fastcore.common.serializers import ListSerializer
 from app.modules.common.caches import CategoryCommuneCache
 from . import schemas
 
@@ -189,3 +192,80 @@ def delete_social(info: schemas.SocialCustomerDeleteSchema, db: Session = Depend
     except Exception as e:
         raise HTTPException(status_code=500,
                             detail={'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+        
+        
+
+def build_filter_query(request:Request, filter: schemas.ListSchema, model: any):
+    conditions = []
+    conditions.append(model.customer_id == filter.customer_id)
+    conditions.append(model.channel == filter.channel)
+
+    if filter.created_from:
+        conditions.append(model.created_at >= filter.created_from)
+
+    if filter.created_to:
+        conditions.append(model.created_at <= to_end_of_day(filter.created_to))
+
+    if filter.status:
+        # ticketcode
+        conditions.append(model.status == filter.status)
+
+    return conditions
+
+
+@router.get("/list-redemptions", name="list")
+def get_list_redemptions(request: Request, filter: schemas.ListSchema = Depends(), db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key)):
+    try:
+        conditions = build_filter_query(request, filter, RewardRedemptionsModel)
+        
+        if filter.code:
+            conditions.append(RewardRedemptionsModel.code == filter.code)
+
+        query = db.query(RewardRedemptionsModel).filter(*conditions)
+        
+        total = query.count()  # tổng record
+        data = query.order_by(RewardRedemptionsModel.created_at.desc()).offset((filter.page - 1) * filter.page_size).limit(filter.page_size).all()
+
+        return {'code': MSG['200']['code'], 'message': MSG['200']['message'],
+                "data": RewardRedemptionsSerializer.serialize_list(data),
+                "pagination": {
+                    "page": filter.page,
+                    "limit": filter.page_size,
+                    "total": total,
+                    "total_pages": math.ceil(total/filter.page_size)
+                }
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={
+                            'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+        
+
+@router.get("/list-transaction", name="list")
+def get_list_transaction(request: Request, filter: schemas.ListSchema = Depends(), db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key)):
+    try:
+        conditions = build_filter_query(request, filter, RewardTransactionsModel)
+        
+        if filter.code:
+            conditions.append(RewardTransactionsModel.transaction_code == filter.code)
+
+        query = db.query(RewardTransactionsModel).filter(*conditions)
+        
+        total = query.count()  # tổng record
+        data = query.order_by(RewardTransactionsModel.created_at.desc()).offset((filter.page - 1) * filter.page_size).limit(filter.page_size).all()
+
+        return {'code': MSG['200']['code'], 'message': MSG['200']['message'],
+                "data": ListSerializer.serialize_list(data),
+                "pagination": {
+                    "page": filter.page,
+                    "limit": filter.page_size,
+                    "total": total,
+                    "total_pages": math.ceil(total/filter.page_size)
+                }
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={
+                            'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})

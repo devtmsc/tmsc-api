@@ -61,3 +61,67 @@ class CustomersModel(SoftDeleteMixin, Base):
     model_config = {
         "from_attributes": True
     }
+
+
+class RewardsModel(SoftDeleteMixin, Base):
+    __tablename__ = "rewards"
+    __table_args__ = {"schema": "customer"}
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    category_id: Mapped[int] = mapped_column(Integer)
+    title: Mapped[str] = mapped_column(String(255))
+    description: Mapped[str] = mapped_column(String(255))
+    points_required: Mapped[int] = mapped_column(Integer)
+    stock: Mapped[int] = mapped_column(Integer)
+    image: Mapped[str] = mapped_column(String(255))
+    status: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class RewardRedemptionsModel(Base):
+    __tablename__ = "reward_redemptions"
+    __table_args__ = {"schema": "customer"}
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    customer_id: Mapped[int] = mapped_column(Integer)
+    total_points_used: Mapped[int] = mapped_column(Integer)
+    status: Mapped[int] = mapped_column(Integer)
+    description: Mapped[str] = mapped_column(String(255))
+    code: Mapped[str] = mapped_column(String(255))
+    reward_id: Mapped[int] = mapped_column(Integer)
+    channel: Mapped[int] = mapped_column(Integer)
+    accepted_by: Mapped[int] = mapped_column(Integer)
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    model_config = {
+        "from_attributes": True
+    }
+    
+
+class RewardTransactionsModel(Base):
+    __tablename__ = "reward_transactions"
+    __table_args__ = {"schema": "customer"}
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    customer_id: Mapped[int] = mapped_column(Integer)
+    transaction_type: Mapped[int] = mapped_column(Integer)
+    point: Mapped[int] = mapped_column(Integer)
+    balance_after: Mapped[int] = mapped_column(Integer)
+    reference_id: Mapped[int] = mapped_column(Integer)
+    reference_type: Mapped[int] = mapped_column(Integer)
+    description: Mapped[str] = mapped_column(String(255))
+    transaction_code: Mapped[str] = mapped_column(String(255))
+    channel: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    model_config = {
+        "from_attributes": True
+    }

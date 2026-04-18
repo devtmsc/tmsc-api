@@ -62,6 +62,7 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
 def order_filter(request:Request, filter: schemas.OrderListSchema):
     conditions = []
     conditions.append(OrdersModel.customer_id == filter.customer_id)
+    conditions.append(OrdersModel.channel == filter.channel)
 
     if filter.created_from:
         conditions.append(OrdersModel.created_at >= filter.created_from)

@@ -35,3 +35,16 @@ DELIVERY_METHOD = {
     1: {'id': 1, 'name': 'Giao hàng tận nhà'},
     2: {'id': 2, 'name': 'Lấy hàng tại công ty'}
 }
+
+REWARD_REDEMPTION_STATUS = {
+    0: {'id': 0, 'name': 'Mới tạo', 'code': 'CREATED'},
+    1: {'id': 1, 'name': 'Chờ xử lý', 'code': 'PENDING'},
+    2: {'id': 2, 'name': 'Đã xử lý', 'code': 'SUCCESS'},
+    3: {'id': 3, 'name': 'Đã huỷ', 'code': 'CANCEL'}
+}
+
+REWARD_TRANSACTION_TYPE = {
+    1: {'id': 1, 'name': 'Thưởng điểm', 'code': 'EARN'},
+    2: {'id': 2, 'name': 'Sử dụng điểm', 'code': 'REDEEM'},
+    3: {'id': 3, 'name': 'Hoàn điểm', 'code': 'REFUND'}
+}
