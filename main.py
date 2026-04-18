@@ -10,6 +10,7 @@ from app.fastcore.user.auth import authentication, get_user_from_token
 from app.fastcore.common.constant import MSG
 from app.fastcore.common.middlewares import RateLimitMiddleware
 from app.modules.customer.routes import router as customer_router
+from app.modules.order.routes import router as order_router
 
 
 app = FastAPI()
@@ -60,6 +61,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 app.include_router(customer_router, prefix='/customer')
+app.include_router(order_router, prefix='/order')
 
 # In tất cả route sau khi app khởi tạo
 @app.get("/routes")

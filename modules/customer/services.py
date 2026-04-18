@@ -7,7 +7,6 @@ from app.fastcore.user.auth_with_api_key import verify_api_key
 from .models import CustomersModel, SocialCustomersModel
 from .serializers import CustomerSerializer
 from app.modules.common.caches import CategoryCommuneCache
-
 from . import schemas
 
 router = APIRouter()
@@ -28,12 +27,12 @@ def create(info: schemas.CustomerCreateSchema, db: Session = Depends(get_custome
         db.commit()
         db.refresh(new_customer)
 
-        return {'code': MSG['200']['status_code'], 'message': MSG['200']['status_code'], 'data': new_customer.id}
+        return {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': new_customer.id}
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail={
-                            'code': MSG['500']['status_code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+                            'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
 
 
 @router.post("/login", name="view")
@@ -41,10 +40,10 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
     try:
         if (info.provider == 0) and not info.customer_id:
             raise HTTPException(status_code=422, detail={
-                                'code': MSG['422']['status_code'], 'message': 'Dữ liệu không hợp lệ, bạn chưa truyền mã khách hàng'})
+                                'code': MSG['422']['code'], 'message': 'Dữ liệu không hợp lệ, bạn chưa truyền mã khách hàng'})
         if (info.provider > 0) and not info.provider_id:
             raise HTTPException(status_code=422, detail={
-                                'code': MSG['422']['status_code'], 'message': 'Dữ liệu không hợp lệ, bạn chưa truyền mã khách hàng'})
+                                'code': MSG['422']['code'], 'message': 'Dữ liệu không hợp lệ, bạn chưa truyền mã khách hàng'})
 
         is_existed = False
         phone = None
@@ -57,7 +56,7 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
                 CustomersModel.id == info.customer_id, CustomersModel.channel == info.channel).first()
             if not customer:
                 raise HTTPException(status_code=404, detail={
-                                    'code': MSG['404']['status_code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
+                                    'code': MSG['404']['code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
 
             is_existed = True
         else:
@@ -71,13 +70,13 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
                     if info.customer_id != social_customer.customer_id:
                         # đã liên kết với 1 tài khoản khác
                         raise HTTPException(status_code=400, detail={
-                                            'code': MSG['400']['status_code'], 'message': 'Tài khoản Gmail/Facebook của bạn đã được liên kết với 1 tài khoản khác của hệ thống!'})
+                                            'code': MSG['400']['code'], 'message': 'Tài khoản Gmail/Facebook của bạn đã được liên kết với 1 tài khoản khác của hệ thống!'})
 
                 customer = db.query(CustomersModel).filter(
                     CustomersModel.id == social_customer.customer_id, CustomersModel.channel == info.channel).first()
                 if not customer:
                     raise HTTPException(status_code=404, detail={
-                                        'code': MSG['404']['status_code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
+                                        'code': MSG['404']['code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
 
                 is_existed = True
                 if info.nickname:
@@ -105,7 +104,7 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
                         CustomersModel.id == info.customer_id, CustomersModel.channel == info.channel).first()
                     if not customer:
                         raise HTTPException(status_code=404, detail={
-                                            'code': MSG['404']['status_code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
+                                            'code': MSG['404']['code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
                     else:
                         social_customer = SocialCustomersModel(channel=info.channel, provider=info.provider, provider_id=info.provider_id, customer_id=customer.id, nickname=info.nickname, first_name=info.first_name,
                                                                last_name=info.last_name, avatar_url=info.avatar_url, phone=info.phone, email=info.email)
@@ -130,7 +129,7 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
                             db.add(customer)
                     else:
                         raise HTTPException(status_code=422, detail={
-                                            'code': MSG['422']['status_code'], 'message': 'Dữ liệu không hợp lệ, bạn chưa truyền số điện thoại'})
+                                            'code': MSG['422']['code'], 'message': 'Dữ liệu không hợp lệ, bạn chưa truyền số điện thoại'})
 
         if is_existed:
             # đã tồn tại thì update lại thông tin
@@ -181,7 +180,7 @@ def delete_social(info: schemas.SocialCustomerDeleteSchema, db: Session = Depend
                                                                 SocialCustomersModel.channel == info.channel, SocialCustomersModel.customer_id == info.customer_id).first()
         if not social_customer:
             raise HTTPException(status_code=404, detail={
-                                            'code': MSG['404']['status_code'], 'message': 'Tài khoản liên kết không tồn tại'})
+                                            'code': MSG['404']['code'], 'message': 'Tài khoản liên kết không tồn tại'})
         db.delete(social_customer)
         db.commit()
         return {'code': MSG['200']['code'], 'message': MSG['200']['message']}
@@ -189,4 +188,4 @@ def delete_social(info: schemas.SocialCustomerDeleteSchema, db: Session = Depend
         raise e
     except Exception as e:
         raise HTTPException(status_code=500,
-                            detail={'code': MSG['500']['status_code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+                            detail={'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
