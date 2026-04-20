@@ -28,7 +28,7 @@ def create(info: schemas.CustomerCreateSchema, db: Session = Depends(get_custome
             return {'code': 'existed', 'message': 'Số điện thoại đã tồn tại', 'data': db_data.id}
 
         new_customer = CustomersModel(
-            fullname=info.fullname, phone=phone, channel=info.channel, status=True)
+            fullname=info.fullname, phone=phone, channel=info.channel, status=True, reward_points=0)
         db.add(new_customer)
         db.commit()
         db.refresh(new_customer)
@@ -131,7 +131,7 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
 
                             # Chưa có tài khoản
                             customer = CustomersModel(
-                                fullname=f"{info.first_name} {info.last_name}", phone=phone, channel=1, status=True, social=[social_customer])
+                                fullname=f"{info.first_name} {info.last_name}", phone=phone, channel=info.channel, status=True, reward_points=0, social=[social_customer])
                             db.add(customer)
                     else:
                         raise HTTPException(status_code=422, detail={
@@ -310,7 +310,7 @@ def get_list_reward(filter: schemas.RewardSchema = Depends(), db: Session = Depe
                             'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
 
 
-@router.post("/redeem-points", name="create")
+@router.post("/redeem-points", name="update")
 def post_redeem_points(info: schemas.RedeemPointsSchema, db: Session = Depends(get_customer_master_db), api_key: str = Depends(verify_api_key),):
     try:
         customer = db.query(CustomersModel).filter(

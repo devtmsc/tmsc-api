@@ -35,9 +35,16 @@ def increase_points(db, model, customer_id: int, amount: int):
     stmt = (
         update(model)
         .where(model.id == customer_id)
-        .values(points=model.reward_points + amount)
+        .values(reward_points=model.reward_points + amount)
+        .returning(model.reward_points)
     )
-    db.execute(stmt)
+    result = db.execute(stmt)
+    new_points = result.scalar_one_or_none()
+    
+    if new_points is None:
+        raise HTTPException("Lỗi đổi thưởng")
+    
+    return new_points
 
 
 # decrease reward point
@@ -46,17 +53,20 @@ def decrease_points(db, model, customer_id: int, amount: int):
         update(model)
         .where(
             model.id == customer_id,
-            model.points >= amount
+            model.reward_points >= amount
         )
-        .values(points=model.points - amount)
+        .values(reward_points=model.reward_points - amount)
+        .returning(model.reward_points)
     )
 
     result = db.execute(stmt)
-
-    if result.rowcount == 0:
-        raise HTTPException(status_code=400, detail={
-                'code': MSG['400']['code'], 'message': 'Bạn không đủ điểm để đổi phần thưởng này'})
+    new_points = result.scalar_one_or_none()
     
+    if new_points is None:
+        raise HTTPException("Bạn không đủ điểm để đổi thưởng")
+    
+    return new_points
+
 
 # increase reward point
 def increase_stock(db, model, reward_id: int, amount: int):
@@ -64,8 +74,15 @@ def increase_stock(db, model, reward_id: int, amount: int):
         update(model)
         .where(model.id == reward_id)
         .values(stock=model.stock + amount)
+        .returning(model.stock)
     )
-    db.execute(stmt)
+    result = db.execute(stmt)
+    new_points = result.scalar_one_or_none()
+    
+    if new_points is None:
+        raise HTTPException("Lỗi đổi thưởng")
+    
+    return new_points
 
 
 # decrease reward point
@@ -77,10 +94,13 @@ def decrease_stock(db, model, reward_id: int, amount: int):
             model.stock >= amount
         )
         .values(stock=model.stock - amount)
+        .returning(model.reward_points)
     )
 
     result = db.execute(stmt)
-
-    if result.rowcount == 0:
-        raise Exception("Not enough points")
+    new_points = result.scalar_one_or_none()
     
+    if new_points is None:
+        raise HTTPException("Không đủ phần thưởng trong kho")
+    
+    return new_points

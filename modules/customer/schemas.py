@@ -38,7 +38,7 @@ class ListSchema(DRFStyleBaseModel):
     customer_id: int = DRFIntField('customer_id', required=True)
     page: int = DRFIntField('page', required=True)
     page_size: int = DRFIntField('page_size', required=False, default=10)
-    code: Optional[str] = DRFCharField('title', max_length=255, required=False, blank=True)
+    code: Optional[str] = DRFCharField('code', max_length=255, required=False, blank=True)
     status: Optional[int] = DRFIntField('status', required=False)
     created_from: Optional[datetime] = DRFDateTimeField('created_from', required=True)
     created_to: Optional[datetime] = DRFDateTimeField('created_to', required=True)
