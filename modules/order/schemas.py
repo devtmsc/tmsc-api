@@ -22,15 +22,15 @@ class OrderCreateSchema(DRFStyleBaseModel):
     receiver_email: Optional[str] = DRFCharField('receiver_email', max_length=255, required=False, blank=True)
     receiver_province_code: Optional[str] = DRFCharField('receiver_province_code', max_length=10, required=False, blank=True)
     receiver_commune_code: Optional[str] = DRFCharField('receiver_commune_code', max_length=10, required=False, blank=True)
-    receiver_address: str = DRFCharField('receiver_phone', max_length=255, required=True, blank=False)
+    receiver_address: str = DRFCharField('receiver_address', max_length=255, required=True, blank=False)
     description: Optional[str] = DRFCharField('description', max_length=255, required=False, blank=True)
     money_collect: int = DRFIntField('money_collect', required=True)
-    total_freight: Optional[int] = DRFIntField('money_collect', required=False)
+    total_freight: Optional[int] = DRFIntField('total_freight', required=False)
     reward_id: Optional[int] = DRFIntField('reward_id', required=False)
     reward_value: Optional[int] = DRFIntField('reward_value', required=False)
     items: Optional[list[OrderItemsSchema]] = DRFListField('items', required=False)
     delivery_method: Optional[int] = DRFIntField('delivery_method', required=False, default=1)
-    pickup_scheduled_at: Optional[datetime] = DRFDateTimeField('pickup_datetime', required=False)
+    pickup_scheduled_at: Optional[datetime] = DRFDateTimeField('pickup_scheduled_at', required=False)
 
 
 class OrderListSchema(DRFStyleBaseModel):
