@@ -43,6 +43,13 @@ REWARD_REDEMPTION_STATUS = {
     3: {'id': 3, 'name': 'Đã huỷ', 'code': 'CANCEL'}
 }
 
+REWARD_REDEMPTION_STATUS_MAPPING = {
+    'CREATED': 0,
+    'PENDING': 1,
+    'SUCCESS': 2,
+    'CANCEL': 3
+}
+
 REWARD_TRANSACTION_TYPE = {
     1: {'id': 1, 'name': 'Thưởng điểm', 'code': 'EARN'},
     2: {'id': 2, 'name': 'Sử dụng điểm', 'code': 'REDEEM'},

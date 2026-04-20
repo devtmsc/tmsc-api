@@ -47,3 +47,10 @@ class ListSchema(DRFStyleBaseModel):
 class RewardSchema(DRFStyleBaseModel):
     page: int = DRFIntField('page', required=True)
     page_size: int = DRFIntField('page_size', required=False, default=10)
+
+
+class RedeemPointsSchema(DRFStyleBaseModel):
+    channel: int = DRFIntField('channel', required=True)
+    customer_id: int = DRFIntField('customer_id', required=True)
+    reward_id: int = DRFIntField('reward_id', required=True)
+

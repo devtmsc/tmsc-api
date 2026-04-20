@@ -2,21 +2,22 @@ import math
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db
 from app.fastcore.common.constant import MSG
-from app.modules.common.utility import normalize_phone_lib
+from app.modules.common.utility import normalize_phone_lib, can_redeem_reward, decrease_stock
 from app.fastcore.common.utility import to_end_of_day
 from app.fastcore.user.auth_with_api_key import verify_api_key
 from .models import CustomersModel, SocialCustomersModel, RewardRedemptionsModel, RewardTransactionsModel, RewardsModel
 from .serializers import CustomerSerializer, RewardRedemptionsSerializer
 from app.fastcore.common.serializers import ListSerializer
 from app.modules.common.caches import CategoryCommuneCache
+from app.modules.common.constant import REWARD_REDEMPTION_STATUS_MAPPING
 from . import schemas
 
 router = APIRouter()
-
-
+    
+    
 @router.post("/create", name="create")
 def create(info: schemas.CustomerCreateSchema, db: Session = Depends(get_customer_master_db), api_key: str = Depends(verify_api_key),):
     try:
@@ -181,11 +182,11 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
 @router.delete("/social", name="delete")
 def delete_social(info: schemas.SocialCustomerDeleteSchema, db: Session = Depends(get_customer_master_db), api_key: str = Depends(verify_api_key)):
     try:
-        social_customer = db.query(SocialCustomersModel).filter(SocialCustomersModel.provider == info.provider, SocialCustomersModel.provider_id == info.provider_id, 
+        social_customer = db.query(SocialCustomersModel).filter(SocialCustomersModel.provider == info.provider, SocialCustomersModel.provider_id == info.provider_id,
                                                                 SocialCustomersModel.channel == info.channel, SocialCustomersModel.customer_id == info.customer_id).first()
         if not social_customer:
             raise HTTPException(status_code=404, detail={
-                                            'code': MSG['404']['code'], 'message': 'Tài khoản liên kết không tồn tại'})
+                'code': MSG['404']['code'], 'message': 'Tài khoản liên kết không tồn tại'})
         db.delete(social_customer)
         db.commit()
         return {'code': MSG['200']['code'], 'message': MSG['200']['message']}
@@ -194,10 +195,9 @@ def delete_social(info: schemas.SocialCustomerDeleteSchema, db: Session = Depend
     except Exception as e:
         raise HTTPException(status_code=500,
                             detail={'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
-        
-        
 
-def build_filter_query(request:Request, filter: schemas.ListSchema, model: any):
+
+def build_filter_query(request: Request, filter: schemas.ListSchema, model: any):
     conditions = []
     conditions.append(model.customer_id == filter.customer_id)
     conditions.append(model.channel == filter.channel)
@@ -218,15 +218,17 @@ def build_filter_query(request:Request, filter: schemas.ListSchema, model: any):
 @router.get("/list-redemptions", name="list")
 def get_list_redemptions(request: Request, filter: schemas.ListSchema = Depends(), db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key)):
     try:
-        conditions = build_filter_query(request, filter, RewardRedemptionsModel)
-        
+        conditions = build_filter_query(
+            request, filter, RewardRedemptionsModel)
+
         if filter.code:
             conditions.append(RewardRedemptionsModel.code == filter.code)
 
         query = db.query(RewardRedemptionsModel).filter(*conditions)
-        
+
         total = query.count()  # tổng record
-        data = query.order_by(RewardRedemptionsModel.created_at.desc()).offset((filter.page - 1) * filter.page_size).limit(filter.page_size).all()
+        data = query.order_by(RewardRedemptionsModel.created_at.desc()).offset(
+            (filter.page - 1) * filter.page_size).limit(filter.page_size).all()
 
         return {'code': MSG['200']['code'], 'message': MSG['200']['message'],
                 "data": RewardRedemptionsSerializer.serialize_list(data),
@@ -235,27 +237,30 @@ def get_list_redemptions(request: Request, filter: schemas.ListSchema = Depends(
                     "limit": filter.page_size,
                     "total": total,
                     "total_pages": math.ceil(total/filter.page_size)
-                }
+        }
         }
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail={
                             'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
-        
+
 
 @router.get("/list-transaction", name="list")
 def get_list_transaction(request: Request, filter: schemas.ListSchema = Depends(), db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key)):
     try:
-        conditions = build_filter_query(request, filter, RewardTransactionsModel)
-        
+        conditions = build_filter_query(
+            request, filter, RewardTransactionsModel)
+
         if filter.code:
-            conditions.append(RewardTransactionsModel.transaction_code == filter.code)
+            conditions.append(
+                RewardTransactionsModel.transaction_code == filter.code)
 
         query = db.query(RewardTransactionsModel).filter(*conditions)
-        
+
         total = query.count()  # tổng record
-        data = query.order_by(RewardTransactionsModel.created_at.desc()).offset((filter.page - 1) * filter.page_size).limit(filter.page_size).all()
+        data = query.order_by(RewardTransactionsModel.created_at.desc()).offset(
+            (filter.page - 1) * filter.page_size).limit(filter.page_size).all()
 
         return {'code': MSG['200']['code'], 'message': MSG['200']['message'],
                 "data": ListSerializer.serialize_list(data),
@@ -264,29 +269,30 @@ def get_list_transaction(request: Request, filter: schemas.ListSchema = Depends(
                     "limit": filter.page_size,
                     "total": total,
                     "total_pages": math.ceil(total/filter.page_size)
-                }
+        }
         }
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail={
                             'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
-        
+
 
 @router.get("/list-reward", name="list")
 def get_list_reward(filter: schemas.RewardSchema = Depends(), db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key)):
     try:
         now = datetime.now(timezone.utc)
         query = db.query(RewardsModel).filter(
-                    RewardsModel.available_from <= now,
-                    or_(
-                        RewardsModel.available_to == None,
-                        RewardsModel.available_to >= now
-                    )
-                ).filter(RewardsModel.status.is_(True), RewardsModel.stock > 0)
-        
+            RewardsModel.available_from <= now,
+            or_(
+                RewardsModel.available_to == None,
+                RewardsModel.available_to >= now
+            )
+        ).filter(RewardsModel.status.is_(True), RewardsModel.stock > 0)
+
         total = query.count()  # tổng record
-        data = query.order_by(RewardsModel.created_at.desc()).offset((filter.page - 1) * filter.page_size).limit(filter.page_size).all()
+        data = query.order_by(RewardsModel.created_at.desc()).offset(
+            (filter.page - 1) * filter.page_size).limit(filter.page_size).all()
 
         return {'code': MSG['200']['code'], 'message': MSG['200']['message'],
                 "data": ListSerializer.serialize_list(data),
@@ -295,7 +301,7 @@ def get_list_reward(filter: schemas.RewardSchema = Depends(), db: Session = Depe
                     "limit": filter.page_size,
                     "total": total,
                     "total_pages": math.ceil(total/filter.page_size)
-                }
+        }
         }
     except HTTPException as e:
         raise e
@@ -303,3 +309,43 @@ def get_list_reward(filter: schemas.RewardSchema = Depends(), db: Session = Depe
         raise HTTPException(status_code=500, detail={
                             'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
 
+
+@router.post("/redeem-points", name="create")
+def post_redeem_points(info: schemas.RedeemPointsSchema, db: Session = Depends(get_customer_master_db), api_key: str = Depends(verify_api_key),):
+    try:
+        customer = db.query(CustomersModel).filter(
+            CustomersModel.id == info.customer_id, CustomersModel.channel == info.channel).first()
+        if not customer:
+            raise HTTPException(status_code=404, detail={
+                'code': MSG['404']['code'], 'message': 'ID khách hàng không tồn tại'})
+
+        now = datetime.now(timezone.utc)
+        reward = db.query(RewardsModel).filter(
+            RewardsModel.available_from <= now,
+            or_(
+                RewardsModel.available_to == None,
+                RewardsModel.available_to >= now
+            )
+        ).filter(RewardsModel.status.is_(True), RewardsModel.stock > 0, RewardsModel.id == info.reward_id).first()
+        if not reward:
+            raise HTTPException(status_code=404, detail={
+                'code': MSG['404']['code'], 'message': 'Mã đổi thưởng không tồn tại hoặc đã hết hạn'})
+
+        if not can_redeem_reward(customer.reward_points, reward.points_required, db, RewardRedemptionsModel):
+            raise HTTPException(status_code=400, detail={
+                'code': MSG['400']['code'], 'message': 'Bạn không đủ điểm để đổi phần thưởng này, hãy kiểm tra lại điểm thưởng và phần thưởng đang chờ duyệt'})
+
+        decrease_stock(db, RewardsModel, info.reward_id, 1)
+        new_redeem = RewardRedemptionsModel(customer_id=info.customer_id, total_points_used=reward.points_required,
+                                            status=REWARD_REDEMPTION_STATUS_MAPPING['CREATED'], description=reward.title, reward_id=info.reward_id, 
+                                            channel=info.channel)
+        db.add(new_redeem)
+        db.commit()
+        return {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': new_redeem}
+    except HTTPException as e:
+        db.rollback()
+        raise e
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail={
+                            'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
