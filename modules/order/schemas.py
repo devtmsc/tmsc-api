@@ -11,6 +11,7 @@ class OrderItemsSchema(DRFStyleBaseModel):
     subtotal_tax: Optional[int] = DRFIntField('subtotal_tax', required=False, default=0)
     total: Optional[int] = DRFIntField('total', required=False, default=0)
     total_tax: Optional[int] = DRFIntField('total_tax', required=False, default=0)
+    image_url: Optional[str] = DRFCharField('image_url', max_length=10, required=False, blank=True)
     
     
 class OrderCreateSchema(DRFStyleBaseModel):
