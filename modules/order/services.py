@@ -40,7 +40,7 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
             items = [item.model_dump() for item in info.items]
 
         new_order = OrdersModel(tracking_code=tracking_code, customer_id=info.customer_id, receiver_name=info.receiver_name, receiver_phone=info.receiver_phone,
-                                receiver_email=info.receiver_email, receiver_province_code=info.receiver_province_code, 
+                                receiver_email=info.receiver_email, receiver_province_code=info.receiver_province_code, channel=info.channel, 
                                 receiver_commune_code=info.receiver_commune_code, receiver_address=info.receiver_address, description=info.description,
                                 status=ORDER_STATUS_MAPPING['CREATED'], money_collect=info.money_collect, total_freight=info.total_freight, items=items,
                                 delivery_method=info.delivery_method, pickup_scheduled_at=info.pickup_scheduled_at,
