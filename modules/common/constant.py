@@ -55,3 +55,15 @@ REWARD_TRANSACTION_TYPE = {
     2: {'id': 2, 'name': 'Sử dụng điểm', 'code': 'REDEEM'},
     3: {'id': 3, 'name': 'Hoàn điểm', 'code': 'REFUND'}
 }
+
+REWARD_TRANSACTION_TYPE_MAPPING = {
+    'EARN': 1,
+    'REDEEM': 2,
+    'REFUND': 3
+}
+
+REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING = {
+    'EARN': 1,
+    'REDEEM': 2,
+    'REFUND': 3
+}

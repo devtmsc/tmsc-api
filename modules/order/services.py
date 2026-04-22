@@ -3,11 +3,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, selectinload
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db, get_logs_master_db
 from app.fastcore.common.constant import MSG
-from app.modules.common.constant import ORDER_STATUS_MAPPING, CUSTOMER_CHANNEL
+from app.modules.common.constant import ORDER_STATUS_MAPPING, CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING
 from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day
 from app.fastcore.user.auth_with_api_key import verify_api_key
+from app.modules.common.utility import can_redeem_reward, decrease_points
 from .models import OrdersModel, OrderLogModel
-from app.modules.customer.models import CustomersModel
+from app.modules.customer.models import CustomersModel, RewardRedemptionsModel, RewardTransactionsModel
 from app.modules.common.caches import CategoryCommuneCache
 from .serializers import OrderSerializer
 from . import schemas
@@ -21,7 +22,12 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
         if info.channel not in CUSTOMER_CHANNEL:
             raise HTTPException(status_code=422, detail={
                                     'code': MSG['422']['code'], 'message': 'Channel không hợp lệ'})
-            
+        
+        tracking_code = format_code(info.tracking_code, str(CUSTOMER_CHANNEL[info.channel].get('code')).upper(), 7)
+        if not tracking_code:
+            raise HTTPException(status_code=400, detail={
+                                    'code': MSG['404']['code'], 'message': 'Lỗi sinh mã đơn hàng'})
+        
         if info.customer_id:
             # có truyền id khách hàng => check tồn tại
             customer = db.query(CustomersModel).filter(
@@ -29,25 +35,41 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
             if not customer:
                 raise HTTPException(status_code=404, detail={
                                     'code': MSG['404']['code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
+            
+            if info.reward_id == 1:
+                # sử dụng điểm tích luỹ
+                if info.reward_value > 0:
+                    if not can_redeem_reward(customer.reward_points, info.reward_value, db, RewardRedemptionsModel):
+                        raise HTTPException(status_code=400, detail={
+                            'code': MSG['400']['code'], 'message': 'Bạn không đủ điểm thưởng để đổi phần thưởng này, hãy kiểm tra lại điểm thưởng hiện có'})
 
-        tracking_code = format_code(info.tracking_code, str(CUSTOMER_CHANNEL[info.channel].get('code')).upper(), 7)
-        if not tracking_code:
-            raise HTTPException(status_code=400, detail={
-                                    'code': MSG['404']['code'], 'message': 'Lỗi sinh mã đơn hàng'})
+                    description = 'Sử dụng điểm tích luỹ để mua sản phẩm'
+                    # tạo redeem
+                    
+                    
+                    new_points = decrease_points(db, CustomersModel, info.customer_id, info.reward_value)
+                    new_redeem = RewardRedemptionsModel(customer_id=info.customer_id, total_points_used=info.reward_value,
+                                            status=REWARD_REDEMPTION_STATUS_MAPPING['SUCCESS'], description=description, reward_id=info.reward_id, 
+                                            channel=info.channel, code=tracking_code, balance_after=new_points)
+                    new_transaction = RewardTransactionsModel(customer_id=info.customer_id, transaction_type=REWARD_TRANSACTION_TYPE_MAPPING['REDEEM'],
+                                                            point=info.reward_value, balance_after=new_points, reference_type=REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING['REDEEM'], 
+                                                            reference_id=None, description=description, transaction_code=tracking_code,
+                                                            channel=info.channel)
+                    db.add(new_redeem)
+                    db.add(new_transaction)
         
         items = None
         if info.items:
             items = [item.model_dump() for item in info.items]
-
+            
         new_order = OrdersModel(tracking_code=tracking_code, customer_id=info.customer_id, receiver_name=info.receiver_name, receiver_phone=info.receiver_phone,
                                 receiver_email=info.receiver_email, receiver_province_code=info.receiver_province_code, channel=info.channel, 
                                 receiver_commune_code=info.receiver_commune_code, receiver_address=info.receiver_address, description=info.description,
                                 status=ORDER_STATUS_MAPPING['CREATED'], money_collect=info.money_collect, total_freight=info.total_freight, items=items,
-                                delivery_method=info.delivery_method, pickup_scheduled_at=info.pickup_scheduled_at,
+                                delivery_method=info.delivery_method, pickup_scheduled_at=info.pickup_scheduled_at, reward_value=info.reward_value, reward_id=info.reward_id,
                                 year_month=get_n_months_ago(0))
         db.add(new_order)
         db.commit()
-        
         
         resp = {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': tracking_code}
         log_event(db_logs, OrderLogModel, {'customer_id': info.customer_id, 'tracking_code': tracking_code, 'channel': info.channel, 'input': info.model_dump(mode="json"), 'output': resp})

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_, func
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db
 from app.fastcore.common.constant import MSG
-from app.modules.common.utility import normalize_phone_lib, can_redeem_reward, decrease_stock
+from app.modules.common.utility import normalize_phone_lib, can_redeem_reward, decrease_stock, decrease_points
 from app.fastcore.common.utility import to_end_of_day
 from app.fastcore.user.auth_with_api_key import verify_api_key
 from .models import CustomersModel, SocialCustomersModel, RewardRedemptionsModel, RewardTransactionsModel, RewardsModel
@@ -197,6 +197,27 @@ def delete_social(info: schemas.SocialCustomerDeleteSchema, db: Session = Depend
                             detail={'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
 
 
+@router.get("/info", name="view")
+def create(info: schemas.CustomerInfoSchema, db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key), commune_cache: CategoryCommuneCache = Depends(CategoryCommuneCache)):
+    try:
+        customer_data = db.query(CustomersModel).filter(CustomersModel.id == info.customer_id, CustomersModel.channel == info.channel).options(selectinload(CustomersModel.social)).all()
+        if not customer_data:
+            raise HTTPException(status_code=404, detail={
+                                    'code': MSG['404']['code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
+
+        data = CustomerSerializer.serialize_list(customer_data, context={'commune_cache': commune_cache},
+                                                 fields=['id', 'fullname', 'phone', 'email', 'address', 'province_code', 'commune_code', 'status',
+                                                         'birthday', 'avatar_url', 'channel', 'channel_name', 'commune_name', 'province_name',
+                                                         'created_time', 'created_time_ago', 'birthday', 'reward_points', 'social'])
+
+        return {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': data[0]}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={
+                            'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+        
+
 def build_filter_query(request: Request, filter: schemas.ListSchema, model: any):
     conditions = []
     conditions.append(model.customer_id == filter.customer_id)
@@ -333,12 +354,13 @@ def post_redeem_points(info: schemas.RedeemPointsSchema, db: Session = Depends(g
 
         if not can_redeem_reward(customer.reward_points, reward.points_required, db, RewardRedemptionsModel):
             raise HTTPException(status_code=400, detail={
-                'code': MSG['400']['code'], 'message': 'Bạn không đủ điểm để đổi phần thưởng này, hãy kiểm tra lại điểm thưởng và phần thưởng đang chờ duyệt'})
+                'code': MSG['400']['code'], 'message': 'Bạn không đủ điểm thưởng để đổi món quà này, hãy kiểm tra lại điểm thưởng hiện có'})
 
         decrease_stock(db, RewardsModel, info.reward_id, 1)
+        new_points = decrease_points(db, CustomersModel, info.customer_id, reward.points_required)
         new_redeem = RewardRedemptionsModel(customer_id=info.customer_id, total_points_used=reward.points_required,
-                                            status=REWARD_REDEMPTION_STATUS_MAPPING['CREATED'], description=reward.title, reward_id=info.reward_id, 
-                                            channel=info.channel)
+                                            status=REWARD_REDEMPTION_STATUS_MAPPING['PENDING'], description=reward.title, reward_id=info.reward_id, 
+                                            channel=info.channel, balance_after=new_points)
         db.add(new_redeem)
         db.commit()
         return {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': new_redeem}

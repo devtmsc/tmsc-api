@@ -97,6 +97,7 @@ class RewardRedemptionsModel(Base):
     code: Mapped[str] = mapped_column(String(255))
     reward_id: Mapped[int] = mapped_column(Integer)
     channel: Mapped[int] = mapped_column(Integer)
+    balance_after: Mapped[int] = mapped_column(Integer)
     accepted_by: Mapped[str] = mapped_column(String(255))
     accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     canceled_by: Mapped[str] = mapped_column(String(255))

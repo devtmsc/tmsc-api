@@ -3,6 +3,11 @@ from typing import Optional
 from datetime import datetime
 
 
+class CustomerInfoSchema(DRFStyleBaseModel):
+    channel: int = DRFIntField('channel', required=True)
+    customer_id: int = DRFIntField('customer_id', required=True)
+    
+    
 class CustomerCreateSchema(DRFStyleBaseModel):
     fullname: str = DRFCharField('fullname', max_length=255, required=True, blank=False)
     phone: str = DRFCharField('phone', max_length=50, required=True, blank=False)
