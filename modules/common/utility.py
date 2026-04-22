@@ -94,7 +94,7 @@ def decrease_stock(db, model, reward_id: int, amount: int):
             model.stock >= amount
         )
         .values(stock=model.stock - amount)
-        .returning(model.reward_points)
+        .returning(model.stock)
     )
 
     result = db.execute(stmt)
