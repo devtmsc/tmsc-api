@@ -38,7 +38,7 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
             
             if info.reward_id == 1:
                 # sử dụng điểm tích luỹ
-                if info.reward_value > 0:
+                if info.reward_value and info.reward_value > 0:
                     if not can_redeem_reward(customer.reward_points, info.reward_value, db, RewardRedemptionsModel):
                         raise HTTPException(status_code=400, detail={
                             'code': MSG['400']['code'], 'message': 'Bạn không đủ điểm thưởng để đổi phần thưởng này, hãy kiểm tra lại điểm thưởng hiện có'})
