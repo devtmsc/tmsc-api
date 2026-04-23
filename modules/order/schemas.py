@@ -1,4 +1,4 @@
-from app.fastcore.common.models import DRFStyleBaseModel, DRFCharField, DRFIntField, DRFListField, DRFDateTimeField, DRFBooleanField
+from app.fastcore.common.models import DRFStyleBaseModel, DRFCharField, DRFIntField, DRFListField, DRFDateTimeField, DRFBooleanField, DRFloatField
 from typing import Optional
 from datetime import datetime
 
@@ -86,3 +86,16 @@ class VTPSchema(DRFStyleBaseModel):
 class InputVTPSchema(DRFStyleBaseModel):
     DATA: VTPSchema
     TOKEN: str = DRFCharField('TOKEN', max_length=200, required=False, blank=True)
+    
+
+class InputGHTKSchema(DRFStyleBaseModel):
+    partner_id: str = DRFCharField('partner_id', max_length=100, required=True, blank=False)
+    label_id: Optional[str] = DRFCharField('label_id', max_length=100, required=False, blank=True)
+    status_id: int = DRFIntField('status_id', required=True)
+    action_time: str = DRFCharField('action_time', max_length=100, required=True, blank=False)
+    reason_code: Optional[str] = DRFCharField('reason_code', max_length=255, required=False, blank=True)
+    reason: Optional[str] = DRFCharField('reason', max_length=255, required=False, blank=True)
+    weight: Optional[float] = DRFloatField('weight', required=False)
+    fee: Optional[int] = DRFIntField('fee', required=False)
+    pick_money: Optional[int] = DRFIntField('pick_money', required=False)
+    return_part_package: Optional[int] = DRFIntField('return_part_package', required=False)

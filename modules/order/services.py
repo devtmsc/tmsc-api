@@ -153,3 +153,30 @@ def vtp_webhook(input: schemas.InputVTPSchema, db_logs: Session = Depends(get_lo
         db_logs.commit()
         raise HTTPException(status_code=500,
                             detail={'code': MSG['500']['status_code'], 'message': MSG['500']['message']})
+        
+
+@router.post("/ghtk-webhook")
+def ghtk_webhook(input: schemas.InputGHTKSchema, db_logs: Session = Depends(get_logs_master_db)):
+    try:
+        output = {"code": MSG['200']['status_code'], 'message': MSG['200']['message']}
+        new_data = OrderStatusLogModel(carrier_code='ghtk', status=0, year_month=get_n_months_ago(0), 
+                                       input=input.model_dump(mode="json"), output=output)
+        db_logs.add(new_data)
+        db_logs.commit()
+        return output
+    except HTTPException as e:
+        if e.status_code not in [404, 422]:
+            output = {"code": MSG['400']['code'], 'message': str(e)}
+            new_data = OrderStatusLogModel(carrier_code='ghtk', status=2, year_month=get_n_months_ago(0), 
+                                       input=input.model_dump(mode="json"), output=output)
+            db_logs.add(new_data)
+            db_logs.commit()
+        raise e
+    except Exception as e:
+        output = {"code": MSG['400']['code'], 'message': str(e)}
+        new_data = OrderStatusLogModel(carrier_code='ghtk', status=2, year_month=get_n_months_ago(0), 
+                                    input=input.model_dump(mode="json"), output=output)
+        db_logs.add(new_data)
+        db_logs.commit()
+        raise HTTPException(status_code=500,
+                            detail={'code': MSG['500']['status_code'], 'message': MSG['500']['message']})
