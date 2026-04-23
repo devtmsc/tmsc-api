@@ -27,6 +27,26 @@ class OrderLogModel(Base):
     }
     
 
+class OrderStatusLogModel(Base):
+    __tablename__ = "order_status_log"
+    __table_args__ = {"schema": "logs"}
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(Integer)
+    tracking_code: Mapped[str] = mapped_column(String(30))
+    carrier_tracking_code: Mapped[str] = mapped_column(String(100))
+    carrier_code: Mapped[str] = mapped_column(String(30))
+    status: Mapped[int] = mapped_column(Integer)
+    year_month: Mapped[int] = mapped_column(Integer)
+    input: Mapped[dict] = mapped_column(JSONB)
+    output: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
+    model_config = {
+        "from_attributes": True
+    }
+
+
 class OrdersModel(SoftDeleteMixin, Base):
     __tablename__ = "orders"
     __table_args__ = {"schema": "customer"}

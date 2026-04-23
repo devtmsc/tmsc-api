@@ -1,4 +1,4 @@
-from app.fastcore.common.models import DRFStyleBaseModel, DRFCharField, DRFIntField, DRFListField, DRFDateTimeField
+from app.fastcore.common.models import DRFStyleBaseModel, DRFCharField, DRFIntField, DRFListField, DRFDateTimeField, DRFBooleanField, DRFDictField
 from typing import Optional
 from datetime import datetime
 
@@ -43,3 +43,46 @@ class OrderListSchema(DRFStyleBaseModel):
     status: Optional[int] = DRFIntField('status', required=False)
     created_from: Optional[datetime] = DRFDateTimeField('created_from', required=True)
     created_to: Optional[datetime] = DRFDateTimeField('created_to', required=True)
+
+
+class VTPPoDSchema(DRFStyleBaseModel):
+    IMAGES: Optional[list[str]] = DRFListField('images', required=False, item_type='str')
+
+
+class VTPSchema(DRFStyleBaseModel):
+    ORDER_NUMBER: str = DRFCharField('ORDER_NUMBER', max_length=50, required=True, blank=False)
+    ORDER_REFERENCE: str = DRFCharField('ORDER_REFERENCE', max_length=50, required=True, blank=False)
+    ORDER_STATUSDATE: str = DRFCharField('ORDER_STATUSDATE', max_length=50, required=True, blank=False)
+    ORDER_STATUS: int = DRFIntField('ORDER_STATUS', required=True)
+    STATUS_NAME: str = DRFCharField('STATUS_NAME', max_length=200, required=True, blank=False)
+    LOCALION_CURRENTLY: str = DRFCharField('LOCALION_CURRENTLY', max_length=200, required=True, blank=False)
+    NOTE: str = DRFCharField('NOTE', max_length=200, required=True, blank=False)
+    MONEY_COLLECTION: int = DRFIntField('MONEY_COLLECTION', required=True)
+    MONEY_TOTAL: int = DRFIntField('MONEY_TOTAL', required=True)
+    PRODUCT_WEIGHT: int = DRFIntField('PRODUCT_WEIGHT', required=True)
+    MONEY_COLLECTION_ORIGIN: Optional[int] = DRFIntField('MONEY_COLLECTION_ORIGIN', required=False)
+    EMPLOYEE_NAME: Optional[str] = DRFCharField('EMPLOYEE_NAME', max_length=200, required=False, blank=True)
+    EMPLOYEE_PHONE: Optional[str] = DRFCharField('EMPLOYEE_PHONE', max_length=200, required=False, blank=True)
+    VOUCHER_VALUE: Optional[int] = DRFIntField('PRODUCT_WEIGHT', required=False)
+    EXPECTED_DELIVERY_DATE: Optional[str] = DRFCharField('EXPECTED_DELIVERY_DATE', max_length=100, required=False,
+                                                         blank=True)
+    MONEY_FEECOD: Optional[int] = DRFIntField('MONEY_FEECOD', required=False)
+    ORDER_PAYMENT: Optional[int] = DRFIntField('ORDER_PAYMENT', required=False)
+    EXPECTED_DELIVERY: Optional[str] = DRFCharField('EXPECTED_DELIVERY', max_length=100, required=False, blank=True)
+    ORDER_SERVICE: Optional[str] = DRFCharField('ORDER_SERVICE', max_length=50, required=False, blank=True)
+    MONEY_TOTALFEE: Optional[int] = DRFIntField('ORDER_PAYMENT', required=False)
+    DETAIL: Optional[list] = DRFListField('DETAIL', required=False)
+    IS_RETURNING: Optional[bool] = DRFBooleanField('IS_RETURNING', required=False)
+    REASON_CODE: Optional[str] = DRFCharField('REASON_CODE', max_length=50, required=False, blank=True)
+    tracking_code: Optional[str] = DRFCharField('tracking_code', max_length=50, required=False, blank=True)
+    request_id: Optional[int] = DRFIntField('ORDER_PAYMENT', required=False)
+    POD: Optional[VTPPoDSchema]
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class InputVTPSchema(DRFStyleBaseModel):
+    DATA: VTPSchema
+    TOKEN: str = DRFCharField('TOKEN', max_length=200, required=False, blank=True)
