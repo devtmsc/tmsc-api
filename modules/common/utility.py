@@ -23,7 +23,7 @@ def normalize_phone_lib(phone: str) -> str:
 def can_redeem_reward(current_points: int, points: int, db: any, model: any):
     total_pending_points = db.query(func.coalesce(func.sum(model.total_points_used), 0)).filter(model.status == 0).scalar()
     
-    if (current_points - total_pending_points) > points:
+    if (current_points - total_pending_points) >= points:
         # đủ điểm 
         return True
     else:
