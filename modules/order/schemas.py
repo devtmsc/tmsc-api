@@ -1,4 +1,4 @@
-from app.fastcore.common.models import DRFStyleBaseModel, DRFCharField, DRFIntField, DRFListField, DRFDateTimeField, DRFBooleanField, DRFDictField
+from app.fastcore.common.models import DRFStyleBaseModel, DRFCharField, DRFIntField, DRFListField, DRFDateTimeField, DRFBooleanField
 from typing import Optional
 from datetime import datetime
 
