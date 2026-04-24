@@ -89,10 +89,10 @@ class InputVTPSchema(DRFStyleBaseModel):
     
 
 class InputGHTKSchema(DRFStyleBaseModel):
-    partner_id: str = DRFCharField('partner_id', max_length=100, required=True, blank=False)
+    partner_id: Optional[str] = DRFCharField('partner_id', max_length=100, required=False, blank=True)
     label_id: Optional[str] = DRFCharField('label_id', max_length=100, required=False, blank=True)
-    status_id: int = DRFIntField('status_id', required=True)
-    action_time: str = DRFCharField('action_time', max_length=100, required=True, blank=False)
+    status_id: Optional[int] = DRFIntField('status_id', required=False)
+    action_time: Optional[str] = DRFCharField('action_time', max_length=100, required=False, blank=True)
     reason_code: Optional[str] = DRFCharField('reason_code', max_length=255, required=False, blank=True)
     reason: Optional[str] = DRFCharField('reason', max_length=255, required=False, blank=True)
     weight: Optional[float] = DRFloatField('weight', required=False)
