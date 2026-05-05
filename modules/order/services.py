@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db, get_logs_master_db
 from app.fastcore.common.constant import MSG
 from app.modules.common.constant import ORDER_STATUS_MAPPING, CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING
-from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day
+from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago
 from app.fastcore.user.auth_with_api_key import verify_api_key
 from app.modules.common.utility import can_redeem_reward, decrease_points
 from .models import OrdersModel, OrderLogModel, OrderStatusLogModel
@@ -67,7 +67,7 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
                                 receiver_commune_code=info.receiver_commune_code, receiver_address=info.receiver_address, description=info.description,
                                 status=ORDER_STATUS_MAPPING['CREATED'], money_collect=info.money_collect, total_freight=info.total_freight, items=items,
                                 delivery_method=info.delivery_method, pickup_scheduled_at=info.pickup_scheduled_at, reward_value=info.reward_value, reward_id=info.reward_id,
-                                year_month=get_n_months_ago(0))
+                                year_month=get_n_months_ago(0), datecreated=get_n_days_ago(0))
         db.add(new_order)
         db.commit()
         
