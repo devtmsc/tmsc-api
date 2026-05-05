@@ -131,3 +131,23 @@ class RewardTransactionsModel(Base):
     model_config = {
         "from_attributes": True
     }
+
+
+class LoyaltyConfigsModel(SoftDeleteMixin, Base):
+    __tablename__ = "loyalty_configs"
+    __table_args__ = {"schema": "customer"}
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    money_unit_step: Mapped[int] = mapped_column(Integer)
+    points_reward_step: Mapped[int] = mapped_column(Integer)
+    points_redeem_step: Mapped[int] = mapped_column(Integer)
+    money_redeem_step: Mapped[int] = mapped_column(Integer)
+    max_burn_percentage: Mapped[int] = mapped_column(Integer)
+    status: Mapped[bool] = mapped_column(Boolean)
+    meta: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    model_config = {
+        "from_attributes": True
+    }

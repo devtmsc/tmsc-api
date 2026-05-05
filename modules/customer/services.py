@@ -8,7 +8,7 @@ from app.fastcore.common.constant import MSG
 from app.modules.common.utility import normalize_phone_lib, can_redeem_reward, decrease_stock, decrease_points
 from app.fastcore.common.utility import to_end_of_day
 from app.fastcore.user.auth_with_api_key import verify_api_key
-from .models import CustomersModel, SocialCustomersModel, RewardRedemptionsModel, RewardTransactionsModel, RewardsModel
+from .models import CustomersModel, SocialCustomersModel, RewardRedemptionsModel, RewardTransactionsModel, RewardsModel, LoyaltyConfigsModel
 from .serializers import CustomerSerializer, RewardRedemptionsSerializer
 from app.fastcore.common.serializers import ListSerializer
 from app.modules.common.caches import CategoryCommuneCache
@@ -209,8 +209,10 @@ def create(info: schemas.CustomerInfoSchema, db: Session = Depends(get_customer_
                                                  fields=['id', 'fullname', 'phone', 'email', 'address', 'province_code', 'commune_code', 'status',
                                                          'birthday', 'avatar_url', 'channel', 'channel_name', 'commune_name', 'province_name',
                                                          'created_time', 'created_time_ago', 'birthday', 'reward_points', 'social'])
+        
+        loyalty_configs = db.query(LoyaltyConfigsModel).filter(LoyaltyConfigsModel.status == True).first()
 
-        return {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': data[0]}
+        return {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': data[0], 'config': loyalty_configs}
     except HTTPException as e:
         raise e
     except Exception as e:
