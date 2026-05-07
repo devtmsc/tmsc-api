@@ -53,6 +53,7 @@ class CustomersModel(SoftDeleteMixin, Base):
     avatar_url: Mapped[str] = mapped_column(String(255))
     channel: Mapped[int] = mapped_column(Integer)
     reward_points: Mapped[int] = mapped_column(Integer)
+    citizen_id: Mapped[str] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     

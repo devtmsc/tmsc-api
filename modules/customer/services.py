@@ -85,22 +85,22 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
                                         'code': MSG['404']['code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
 
                 is_existed = True
-                if info.nickname:
+                if info.nickname and (social_customer.nickname != info.nickname):
                     social_customer.nickname = info.nickname
 
-                if info.first_name:
+                if info.first_name and (social_customer.first_name != info.first_name):
                     social_customer.first_name = info.first_name
 
-                if info.last_name:
+                if info.last_name and (social_customer.last_name != info.last_name):
                     social_customer.last_name = info.last_name
 
-                if info.avatar_url:
+                if info.avatar_url and (social_customer.avatar_url != info.avatar_url):
                     social_customer.avatar_url = info.avatar_url
 
-                if phone:
+                if phone and (social_customer.phone != phone):
                     social_customer.phone = phone
 
-                if info.email:
+                if info.email and (social_customer.email != info.email):
                     social_customer.email = info.email
 
             else:
@@ -142,23 +142,26 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
             if info.first_name or info.last_name:
                 customer.fullname = f"{info.first_name} {info.last_name}"
 
-            if info.avatar_url:
+            if info.avatar_url and (customer.avatar_url != info.avatar_url):
                 customer.avatar_url = info.avatar_url
 
-            if info.email:
+            if info.email and (customer.email != info.email):
                 customer.email = info.email
 
-            if info.province_code:
+            if info.province_code and (customer.province_code != info.province_code):
                 customer.province_code = info.province_code
 
-            if info.commune_code:
+            if info.commune_code and (customer.commune_code != info.commune_code):
                 customer.commune_code = info.commune_code
 
-            if info.address:
+            if info.address and (customer.address != info.address):
                 customer.address = info.address
 
-            if info.birthday:
+            if info.birthday and (customer.birthday != info.birthday):
                 customer.birthday = info.birthday
+                
+            if info.citizen_id and (customer.citizen_id != info.citizen_id):
+                customer.citizen_id = info.citizen_id
 
         db.commit()
         db.refresh(customer)
