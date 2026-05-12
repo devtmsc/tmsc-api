@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Any
 from app.fastcore.common.utility import to_dict, get_field_value, update_field_value, get_value_from_dict, format_datetime, format_code, time_ago, add_hours, hours_to_days_hours, get_field_label
-from app.modules.common.constant import CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS
+from app.modules.common.constant import CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS, REWARD_TRANSACTION_TYPE
 
 
 def detail_to_dict(obj):
@@ -58,10 +58,29 @@ class RewardRedemptionsSerializer:
 
             status = get_field_value(item, 'status')
             update_field_value(item, 'status_name', get_value_from_dict(dictionary=REWARD_REDEMPTION_STATUS, key_path=status, default={}).get('name', ''))
-
+            
             if fields:
                 item = {k: v for k, v in item.items() if k in fields}
 
             result.append(item)
         return result
+    
+    
+class RewardTransactionSerializer:
+    @classmethod
+    def serialize_list(cls, objects: List[Any] = [], context: dict = None, fields: List[str] = None):
+        result = []
+        
+        for item in objects:
+            item = to_dict(item)
+
+            transaction_type = get_field_value(item, 'transaction_type')
+            update_field_value(item, 'transaction_type_name', get_value_from_dict(dictionary=REWARD_TRANSACTION_TYPE, key_path=transaction_type, default={}).get('name', ''))
+            
+            if fields:
+                item = {k: v for k, v in item.items() if k in fields}
+
+            result.append(item)
+        return result
+
 

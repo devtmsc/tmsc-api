@@ -9,7 +9,7 @@ from app.modules.common.utility import normalize_phone_lib, can_redeem_reward, d
 from app.fastcore.common.utility import to_end_of_day
 from app.fastcore.user.auth_with_api_key import verify_api_key
 from .models import CustomersModel, SocialCustomersModel, RewardRedemptionsModel, RewardTransactionsModel, RewardsModel, LoyaltyConfigsModel
-from .serializers import CustomerSerializer, RewardRedemptionsSerializer
+from .serializers import CustomerSerializer, RewardRedemptionsSerializer, RewardTransactionSerializer
 from app.fastcore.common.serializers import ListSerializer
 from app.modules.common.caches import CategoryCommuneCache
 from app.modules.common.constant import REWARD_REDEMPTION_STATUS_MAPPING
@@ -289,7 +289,7 @@ def get_list_transaction(request: Request, filter: schemas.ListSchema = Depends(
             (filter.page - 1) * filter.page_size).limit(filter.page_size).all()
 
         return {'code': MSG['200']['code'], 'message': MSG['200']['message'],
-                "data": ListSerializer.serialize_list(data),
+                "data": RewardTransactionSerializer.serialize_list(data),
                 "pagination": {
                     "page": filter.page,
                     "limit": filter.page_size,
