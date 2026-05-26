@@ -82,7 +82,7 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
         new_order = OrdersModel(tracking_code=tracking_code, customer_id=info.customer_id, receiver_name=info.receiver_name, receiver_phone=info.receiver_phone,
                                 receiver_email=info.receiver_email, receiver_province_code=info.receiver_province_code, channel=info.channel, 
                                 receiver_commune_code=info.receiver_commune_code, receiver_address=info.receiver_address, description=info.description,
-                                status=1, money_collect=info.money_collect, total_freight=info.total_freight, items=items,
+                                status=1, money_collect=info.money_collect, total_amount=info.money_collect, total_freight=info.total_freight, items=items,
                                 delivery_method=info.delivery_method, pickup_scheduled_at=info.pickup_scheduled_at, reward_value=info.reward_value, reward_id=info.reward_id,
                                 year_month=get_n_months_ago(0), datecreated=get_n_days_ago(0))
         db.add(new_order)
@@ -229,6 +229,9 @@ async def sync_status(tracking_code: Optional[str] = None, db: Session = Depends
                 
                 if order.money_collect != data.get('pick_money'):
                     order.money_collect = data.get('pick_money')
+                    
+                if order.total_amount != data.get('value'):
+                    order.total_amount = data.get('value')
                 
                 if order.total_freight != data.get('weight'):
                     order.total_freight = data.get('weight')
