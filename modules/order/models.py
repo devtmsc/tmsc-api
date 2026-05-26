@@ -70,6 +70,7 @@ class OrdersModel(SoftDeleteMixin, Base):
     items: Mapped[dict] = mapped_column(JSONB)
     delivery_method: Mapped[int] = mapped_column(Integer)
     pickup_scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    picked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     returned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     canceled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -77,6 +78,9 @@ class OrdersModel(SoftDeleteMixin, Base):
     cancel_reason: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     year_month: Mapped[int] = mapped_column(Integer)
     datecreated: Mapped[int] = mapped_column(Integer)
+    last_accessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    carrier_code: Mapped[str] = mapped_column(String(20))
+    carrier_tracking_code: Mapped[str] = mapped_column(String(50))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     

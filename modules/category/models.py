@@ -1,5 +1,5 @@
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy import String, ForeignKey
+from sqlalchemy import String, ForeignKey, Integer
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from typing import List
 from app.fastcore.db.base import Base
@@ -40,3 +40,73 @@ class ProvinceModel(Base):
     model_config = {
         "from_attributes": True
     }
+
+
+class ChannelModel(Base):
+    __tablename__ = "channel"
+    __table_args__ = {"schema": "category"}
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(255))
+    
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class OrderPartnerModel(Base):
+    __tablename__ = "order_partner"
+    __table_args__ = {"schema": "category"}
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(20))
+    name: Mapped[str] = mapped_column(String(255))
+    
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class OrderReasonModel(Base):
+    __tablename__ = "order_reason"
+    __table_args__ = {"schema": "category"}
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    partner_code: Mapped[str] = mapped_column(String(20))
+    code: Mapped[str] = mapped_column(String(20))
+    name: Mapped[str] = mapped_column(String(255))
+    type: Mapped[int] = mapped_column(Integer)
+    
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class OrderStatusModel(Base):
+    __tablename__ = "order_status"
+    __table_args__ = {"schema": "category"}
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(255))
+    color: Mapped[str] = mapped_column(String(255))
+    
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class OrderStatusMappingModel(Base):
+    __tablename__ = "order_status_mapping"
+    __table_args__ = {"schema": "category"}
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    partner_code: Mapped[str] = mapped_column(String(20))
+    status_code: Mapped[int] = mapped_column(Integer)
+    partner_status_code: Mapped[str] = mapped_column(String(20))
+    name: Mapped[str] = mapped_column(String(255))
+    
+    model_config = {
+        "from_attributes": True
+    }
+

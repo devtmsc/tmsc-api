@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Any
 from app.fastcore.common.utility import to_dict, get_field_value, update_field_value, get_value_from_dict, format_datetime, time_ago
-from app.modules.common.constant import CUSTOMER_CHANNEL, ORDER_STATUS, DELIVERY_METHOD
+from app.modules.common.constant import CUSTOMER_CHANNEL, DELIVERY_METHOD
 
 
 class OrderSerializer:
@@ -9,12 +9,13 @@ class OrderSerializer:
     def serialize_list(cls, objects: List[Any] = [], context: dict = None, fields: List[str] = None):
         result = []
         commune_cache = context['commune_cache']().get()
+        order_status_cache = context['order_status_cache']().get()
 
         for item in objects:
             item = to_dict(item)
 
             status = get_field_value(item, 'status')
-            update_field_value(item, 'status_name', get_value_from_dict(dictionary=ORDER_STATUS, key_path=status, default={}).get('name', ''))
+            update_field_value(item, 'status_name', get_value_from_dict(dictionary=order_status_cache, key_path=status, default={}).get('name', ''))
             
             delivery_method = get_field_value(item, 'delivery_method')
             update_field_value(item, 'delivery_method_name', get_value_from_dict(dictionary=DELIVERY_METHOD, key_path=delivery_method, default={}).get('name', ''))

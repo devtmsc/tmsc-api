@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str
     API_KEY_NAME: str
     API_KEY: str
+    
+    GHTK_URL: str
+    GHTK_TOKEN: str
+    GHTK_X_CLIENT_SOURCE: str
 
     class Config:
         env_file = "app/.env"

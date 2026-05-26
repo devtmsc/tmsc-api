@@ -1,15 +1,20 @@
 import math
+import requests
+import httpx
+from app.config import settings
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session, selectinload
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db, get_logs_master_db
 from app.fastcore.common.constant import MSG
-from app.modules.common.constant import ORDER_STATUS_MAPPING, CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING
-from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago
+from app.modules.common.constant import CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING, ORDER_FINAL_STATUSES, ORDER_SUCCESS_STATUSES, ORDER_RETURNED_STATUSES
+from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago, is_datetime
 from app.fastcore.user.auth_with_api_key import verify_api_key
 from app.modules.common.utility import can_redeem_reward, decrease_points
 from .models import OrdersModel, OrderLogModel, OrderStatusLogModel
 from app.modules.customer.models import CustomersModel, RewardRedemptionsModel, RewardTransactionsModel
-from app.modules.common.caches import CategoryCommuneCache
+from app.modules.common.caches import CategoryCommuneCache, CategoryOrderStatusCache, CategoryOrderStatusMappingCache
 from .serializers import OrderSerializer
 from . import schemas
 
@@ -23,7 +28,7 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
             raise HTTPException(status_code=422, detail={
                                     'code': MSG['422']['code'], 'message': 'Channel không hợp lệ'})
         
-        tracking_code = format_code(info.tracking_code, str(CUSTOMER_CHANNEL[info.channel].get('code')).upper(), 7)
+        tracking_code = format_code(info.tracking_code, str(CUSTOMER_CHANNEL[info.channel].get('code')).upper(), 1)
         if not tracking_code:
             raise HTTPException(status_code=400, detail={
                                     'code': MSG['404']['code'], 'message': 'Lỗi sinh mã đơn hàng'})
@@ -65,7 +70,7 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
         new_order = OrdersModel(tracking_code=tracking_code, customer_id=info.customer_id, receiver_name=info.receiver_name, receiver_phone=info.receiver_phone,
                                 receiver_email=info.receiver_email, receiver_province_code=info.receiver_province_code, channel=info.channel, 
                                 receiver_commune_code=info.receiver_commune_code, receiver_address=info.receiver_address, description=info.description,
-                                status=ORDER_STATUS_MAPPING['CREATED'], money_collect=info.money_collect, total_freight=info.total_freight, items=items,
+                                status=1, money_collect=info.money_collect, total_freight=info.total_freight, items=items,
                                 delivery_method=info.delivery_method, pickup_scheduled_at=info.pickup_scheduled_at, reward_value=info.reward_value, reward_id=info.reward_id,
                                 year_month=get_n_months_ago(0), datecreated=get_n_days_ago(0))
         db.add(new_order)
@@ -100,7 +105,7 @@ def order_filter(request:Request, filter: schemas.OrderListSchema):
 
 
 @router.get("/list", name="list")
-def get_list(request: Request, filter: schemas.OrderListSchema = Depends(), db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key), commune_cache: CategoryCommuneCache = Depends(CategoryCommuneCache)):
+def get_list(request: Request, filter: schemas.OrderListSchema = Depends(), db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key), commune_cache: CategoryCommuneCache = Depends(CategoryCommuneCache), order_status_cache: CategoryOrderStatusCache = Depends(CategoryOrderStatusCache)):
     try:
         conditions = order_filter(request, filter)
         
@@ -113,7 +118,7 @@ def get_list(request: Request, filter: schemas.OrderListSchema = Depends(), db: 
         data = query.order_by(OrdersModel.created_at.desc()).offset((filter.page - 1) * filter.page_size).limit(filter.page_size).all()
 
         return {'code': MSG['200']['code'], 'message': MSG['200']['message'],
-                "data": OrderSerializer.serialize_list(data, context={'commune_cache': commune_cache}),
+                "data": OrderSerializer.serialize_list(data, context={'commune_cache': commune_cache, 'order_status_cache': order_status_cache}),
                 "pagination": {
                     "page": filter.page,
                     "limit": filter.page_size,
@@ -126,6 +131,119 @@ def get_list(request: Request, filter: schemas.OrderListSchema = Depends(), db: 
     except Exception as e:
         raise HTTPException(status_code=500, detail={
                             'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+
+
+async def ghtk_sync(tracking_code: str):
+    url = f"{settings.GHTK_URL}services/shipment/v2/{tracking_code}"
+
+    headers = {
+        "Token": settings.GHTK_TOKEN,
+        "X-Client-Source": settings.GHTK_X_CLIENT_SOURCE,
+        "Content-Type": "application/json"
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(url, headers=headers)
+
+        # check HTTP status
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"GHTK API error: {response.text}"
+            )
+
+        data = response.json()
+
+        # check success (handle cả string và boolean)
+        if data.get("success") in [True, "true"]:
+            return data.get("order")
+
+        return None
+
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Request to GHTK failed: {str(e)}"
+        )
+
+
+@router.get("/sync-status")
+async def sync_status(tracking_code: Optional[str] = None, db: Session = Depends(get_customer_replica_db), order_status_mapping_cache: CategoryOrderStatusMappingCache = Depends(CategoryOrderStatusMappingCache)):
+    try:
+        list_carrier = ['ghtk']
+        
+        order_status_mapping = order_status_mapping_cache().get()
+        if not order_status_mapping:
+            raise HTTPException(status_code=400, detail={
+                                    'code': MSG['400']['code'], 'message': 'Lỗi danh sách trạng thái'})
+        conditions = [OrdersModel.carrier_code.in_(list_carrier), OrdersModel.carrier_tracking_code.is_not(None), OrdersModel.datecreated >= get_n_days_ago(90)]
+        conditions.append(or_(
+                and_(
+                    OrdersModel.status.notin_(ORDER_FINAL_STATUSES),
+                ),
+                and_(
+                    OrdersModel.status.in_(ORDER_FINAL_STATUSES),
+                    or_(
+                        and_(OrdersModel.completed_at >= get_n_days_ago(3)),
+                        and_(OrdersModel.canceled_at >= get_n_days_ago(3)),
+                    )
+                )
+            ))
+        if tracking_code:
+            conditions.append(OrdersModel.tracking_code==tracking_code)
+        
+        order = db.query(OrdersModel).filter(*conditions).order_by(OrdersModel.last_accessed_at.asc()).first()
+        if not order:
+            return {'code': MSG['200']['code'], 'message': 'Đã xử lý hết'}
+
+        if order.carrier_code == 'ghtk':
+            data = await ghtk_sync(order.carrier_tracking_code)
+            
+            if data:
+                status_mapping = order_status_mapping[order.carrier_code]
+                partner_status = str(data.get('status'))
+                if partner_status in status_mapping:
+                    status = status_mapping[partner_status].get('status_code')
+                else:
+                    raise HTTPException(status_code=400, detail={
+                                        'code': MSG['400']['code'], 'message': f'Trạng thái không tồn tại {order.carrier_code} - {data.get('status')}'})
+                
+                if status != order.status:
+                    order.status = status
+                
+                if order.total_freight != data.get('ship_money'):
+                    order.total_freight = data.get('ship_money')
+                
+                if order.money_collect != data.get('pick_money'):
+                    order.money_collect = data.get('pick_money')
+                
+                if order.total_freight != data.get('weight'):
+                    order.total_freight = data.get('weight')
+                
+                if data.get('pick_date'):
+                    pick_date = is_datetime(data.get('pick_date'), '%Y-%m-%d')
+                    if pick_date:
+                        order.picked_at = pick_date
+                if data.get('deliver_date'):
+                    deliver_date = is_datetime(data.get('deliver_date'), '%Y-%m-%d')
+                    if deliver_date:
+                        if order.status in ORDER_SUCCESS_STATUSES:
+                            order.completed_at = deliver_date
+                            order.returned_at = None
+                        elif order.status in ORDER_RETURNED_STATUSES:
+                            order.completed_at = None
+                            order.returned_at = deliver_date
+                        
+        order.last_accessed_at = get_n_days_ago(0)
+        db.commit()
+        
+        return {'code': MSG['200']['code'], 'message': f'Thành công - {order.tracking_code}'}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500,
+                            detail={'code': MSG['500']['status_code'], 'message': MSG['500']['message'], 'system_message': str(e)})
 
 
 @router.post("/vtp-webhook")
