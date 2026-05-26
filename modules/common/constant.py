@@ -4,12 +4,13 @@ CONFIG = {}
 
 
 CUSTOMER_CHANNEL = {
-    1: {'id': 1, 'name': 'E&S Pharma', 'code': 'ES01'}
+    1: {'id': 1, 'name': 'E&S Pharma', 'code': 'ES'}
 }
 
 ORDER_FINAL_STATUSES = [8, 11, 12]
 ORDER_SUCCESS_STATUSES = [8]
 ORDER_RETURNED_STATUSES = [11]
+ORDER_IGNORED_STATUSES = [20]
 
 DELIVERY_METHOD = {
     1: {'id': 1, 'name': 'Giao hàng tận nhà'},

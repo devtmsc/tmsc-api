@@ -61,6 +61,7 @@ class OrderPartnerModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str] = mapped_column(String(20))
     name: Mapped[str] = mapped_column(String(255))
+    tracking_url: Mapped[str] = mapped_column(String(255))
     
     model_config = {
         "from_attributes": True

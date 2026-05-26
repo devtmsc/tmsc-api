@@ -8,18 +8,30 @@ from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session, selectinload
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db, get_logs_master_db
 from app.fastcore.common.constant import MSG
-from app.modules.common.constant import CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING, ORDER_FINAL_STATUSES, ORDER_SUCCESS_STATUSES, ORDER_RETURNED_STATUSES
+from app.modules.common.constant import CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING, ORDER_FINAL_STATUSES, ORDER_SUCCESS_STATUSES, ORDER_RETURNED_STATUSES, ORDER_IGNORED_STATUSES
 from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago, is_datetime
 from app.fastcore.user.auth_with_api_key import verify_api_key
 from app.modules.common.utility import can_redeem_reward, decrease_points
 from .models import OrdersModel, OrderLogModel, OrderStatusLogModel
 from app.modules.customer.models import CustomersModel, RewardRedemptionsModel, RewardTransactionsModel
-from app.modules.common.caches import CategoryCommuneCache, CategoryOrderStatusCache, CategoryOrderStatusMappingCache
+from app.modules.common.caches import CategoryCommuneCache, CategoryOrderStatusCache, CategoryOrderStatusMappingCache, CategoryOrderPartnerCache
 from .serializers import OrderSerializer
 from . import schemas
 
 router = APIRouter()
 
+
+@router.get("/status", name="list")
+def status_list(status_cache: CategoryOrderStatusCache = Depends(CategoryOrderStatusCache)):
+    try:
+        db_data = status_cache().get()
+        return {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': list(db_data.values())}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500,
+                            detail={'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+        
 
 @router.post("/create", name="create")
 def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_master_db), db_logs: Session = Depends(get_logs_master_db), api_key: str = Depends(verify_api_key),):
@@ -105,7 +117,7 @@ def order_filter(request:Request, filter: schemas.OrderListSchema):
 
 
 @router.get("/list", name="list")
-def get_list(request: Request, filter: schemas.OrderListSchema = Depends(), db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key), commune_cache: CategoryCommuneCache = Depends(CategoryCommuneCache), order_status_cache: CategoryOrderStatusCache = Depends(CategoryOrderStatusCache)):
+def get_list(request: Request, filter: schemas.OrderListSchema = Depends(), db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key), commune_cache: CategoryCommuneCache = Depends(CategoryCommuneCache), order_status_cache: CategoryOrderStatusCache = Depends(CategoryOrderStatusCache), order_partner_cache: CategoryOrderPartnerCache = Depends(CategoryOrderPartnerCache)):
     try:
         conditions = order_filter(request, filter)
         
@@ -118,7 +130,7 @@ def get_list(request: Request, filter: schemas.OrderListSchema = Depends(), db: 
         data = query.order_by(OrdersModel.created_at.desc()).offset((filter.page - 1) * filter.page_size).limit(filter.page_size).all()
 
         return {'code': MSG['200']['code'], 'message': MSG['200']['message'],
-                "data": OrderSerializer.serialize_list(data, context={'commune_cache': commune_cache, 'order_status_cache': order_status_cache}),
+                "data": OrderSerializer.serialize_list(data, context={'commune_cache': commune_cache, 'order_status_cache': order_status_cache, 'order_partner_cache': order_partner_cache}),
                 "pagination": {
                     "page": filter.page,
                     "limit": filter.page_size,
@@ -209,7 +221,7 @@ async def sync_status(tracking_code: Optional[str] = None, db: Session = Depends
                     raise HTTPException(status_code=400, detail={
                                         'code': MSG['400']['code'], 'message': f'Trạng thái không tồn tại {order.carrier_code} - {data.get('status')}'})
                 
-                if status != order.status:
+                if (status not in ORDER_IGNORED_STATUSES) and (status != order.status):
                     order.status = status
                 
                 if order.total_freight != data.get('ship_money'):

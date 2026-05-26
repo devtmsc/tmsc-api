@@ -10,6 +10,7 @@ class OrderSerializer:
         result = []
         commune_cache = context['commune_cache']().get()
         order_status_cache = context['order_status_cache']().get()
+        order_partner_cache = context['order_partner_cache']().get()
 
         for item in objects:
             item = to_dict(item)
@@ -35,6 +36,16 @@ class OrderSerializer:
             if pickup_scheduled_at:
                 update_field_value(item, 'pickup_scheduled_at', format_datetime(pickup_scheduled_at, '%Y/%m/%d %H:%M'))
                 
+            carrier_code = get_field_value(item, 'carrier_code')
+            carrier_tracking_code = get_field_value(item, 'carrier_tracking_code')
+            if carrier_code:
+                update_field_value(item, 'carrier_name', get_value_from_dict(dictionary=order_partner_cache, key_path=carrier_code, default={}).get('name', ''))
+                carrier_tracking_url = get_value_from_dict(dictionary=order_partner_cache, key_path=carrier_code, default={}).get('tracking_url', '')
+                update_field_value(item, 'carrier_tracking_url', carrier_tracking_url + str(carrier_tracking_code))
+            else:
+                update_field_value(item, 'carrier_name', None)
+                update_field_value(item, 'carrier_tracking_url', None)
+            
             if fields:
                 item = {k: v for k, v in item.items() if k in fields}
 

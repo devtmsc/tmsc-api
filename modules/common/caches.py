@@ -61,8 +61,8 @@ class CategoryOrderPartnerCache(CustomCache):
         self.db = db
 
     def data(self):
-        db_data = self.db.query(OrderPartnerModel.code, OrderPartnerModel.name).all()
-        return {row[0]: {'code': row[0], 'name': row[1]} for row in db_data}
+        db_data = self.db.query(OrderPartnerModel.code, OrderPartnerModel.name, OrderPartnerModel.tracking_url).all()
+        return {row[0]: {'code': row[0], 'name': row[1], 'tracking_url': row[2]} for row in db_data}
 
 
 class CategoryOrderStatusCache(CustomCache):
