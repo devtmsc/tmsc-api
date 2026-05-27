@@ -11,9 +11,9 @@ from app.fastcore.common.constant import MSG
 from app.modules.common.constant import CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING, ORDER_FINAL_STATUSES, ORDER_SUCCESS_STATUSES, ORDER_RETURNED_STATUSES, ORDER_IGNORED_STATUSES, ORDER_CANCELLED_STATUSES
 from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago, is_datetime
 from app.fastcore.user.auth_with_api_key import verify_api_key
-from app.modules.common.utility import can_redeem_reward, decrease_points, normalize_phone_lib
+from app.modules.common.utility import can_redeem_reward, decrease_points, normalize_phone_lib, increase_points, calculate_reward_points
 from .models import OrdersModel, OrderLogModel, OrderStatusLogModel
-from app.modules.customer.models import CustomersModel, RewardRedemptionsModel, RewardTransactionsModel
+from app.modules.customer.models import CustomersModel, RewardRedemptionsModel, RewardTransactionsModel, LoyaltyConfigsModel
 from app.modules.common.caches import CategoryCommuneCache, CategoryOrderStatusCache, CategoryOrderStatusMappingCache, CategoryOrderPartnerCache
 from .serializers import OrderSerializer
 from . import schemas
@@ -329,6 +329,47 @@ async def sync_status(tracking_code: Optional[str] = None, db: Session = Depends
         raise HTTPException(status_code=500,
                             detail={'code': MSG['500']['status_code'], 'message': MSG['500']['message'], 'system_message': str(e)})
 
+
+@router.get("/process-order-reward")
+async def process_order_reward(tracking_code: Optional[str] = None, db: Session = Depends(get_customer_replica_db), order_status_mapping_cache: CategoryOrderStatusMappingCache = Depends(CategoryOrderStatusMappingCache)):
+    try:
+        conditions = [OrdersModel.datecreated >= get_n_days_ago(90), OrdersModel.status.in_(ORDER_SUCCESS_STATUSES), OrdersModel.is_rewarded == 0, OrdersModel.completed_at < get_n_days_ago(2), OrdersModel.customer_id > 0]
+        if tracking_code:
+            conditions.append(OrdersModel.tracking_code==tracking_code)
+        
+        order = db.query(OrdersModel).filter(*conditions).order_by(OrdersModel.created_at.asc()).first()
+        if not order:
+            return {'code': MSG['200']['code'], 'message': 'Đã xử lý hết'}
+
+        if order.total_amount and order.total_amount > 0:
+            description = f'Thưởng điểm tích luỹ khi mua đơn hàng {order.tracking_code}'
+            
+            loyalty_configs = db.query(LoyaltyConfigsModel).filter(LoyaltyConfigsModel.status == True).first()
+            if not loyalty_configs:
+                raise HTTPException(status_code=400, detail={
+                                        'code': MSG['400']['code'], 'message': 'Cấu hình đổi điểm không tồn tại'})
+            
+            point = calculate_reward_points(order.total_amount, loyalty_configs.money_unit_step, loyalty_configs.points_reward_step)
+            
+            # tạo redeem
+            new_points = increase_points(db, CustomersModel, order.customer_id, point)
+            new_transaction = RewardTransactionsModel(customer_id=order.customer_id, transaction_type=REWARD_TRANSACTION_TYPE_MAPPING['EARN'],
+                                                    point=point, balance_after=new_points, reference_type=REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING['EARN'], 
+                                                    reference_id=None, description=description, transaction_code=order.tracking_code,
+                                                    channel=order.channel)
+            db.add(new_transaction)
+        
+        order.is_rewarded = 1
+        
+        db.commit()
+        
+        return {'code': MSG['200']['code'], 'message': f'Thành công - {order.tracking_code}'}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500,
+                            detail={'code': MSG['500']['status_code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+        
 
 @router.post("/vtp-webhook")
 def vtp_webhook(input: schemas.InputVTPSchema, db_logs: Session = Depends(get_logs_master_db)):
