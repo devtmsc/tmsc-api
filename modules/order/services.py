@@ -41,7 +41,7 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
                                     'code': MSG['422']['code'], 'message': 'Channel không hợp lệ'})
         
         if str(info.tracking_code).isdigit():
-            tracking_code = format_code(info.tracking_code, str(CUSTOMER_CHANNEL[info.channel].get('code')).upper(), 1)
+            tracking_code = format_code(int(info.tracking_code), str(CUSTOMER_CHANNEL[info.channel].get('code')).upper(), 1)
             if not tracking_code:
                 raise HTTPException(status_code=400, detail={
                                         'code': MSG['404']['code'], 'message': 'Lỗi sinh mã đơn hàng'})
