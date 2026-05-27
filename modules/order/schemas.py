@@ -32,6 +32,8 @@ class OrderCreateSchema(DRFStyleBaseModel):
     items: Optional[list[OrderItemsSchema]] = DRFListField('items', required=False)
     delivery_method: Optional[int] = DRFIntField('delivery_method', required=False, default=1)
     pickup_scheduled_at: Optional[datetime] = DRFDateTimeField('pickup_scheduled_at', required=False)
+    carrier_code: Optional[str] = DRFCharField('carrier_code', max_length=10, required=False, blank=True)
+    carrier_tracking_code: Optional[str] = DRFCharField('carrier_tracking_code', max_length=100, required=False, blank=True)
 
 
 class OrderListSchema(DRFStyleBaseModel):

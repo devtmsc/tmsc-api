@@ -40,76 +40,117 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
             raise HTTPException(status_code=422, detail={
                                     'code': MSG['422']['code'], 'message': 'Channel không hợp lệ'})
         
-        tracking_code = format_code(info.tracking_code, str(CUSTOMER_CHANNEL[info.channel].get('code')).upper(), 1)
-        if not tracking_code:
-            raise HTTPException(status_code=400, detail={
-                                    'code': MSG['404']['code'], 'message': 'Lỗi sinh mã đơn hàng'})
-        
-        customer_id = 0
-        if info.customer_id:
-            customer_id = info.customer_id
-            # có truyền id khách hàng => check tồn tại
-            customer = db.query(CustomersModel).filter(
-                CustomersModel.id == info.customer_id, CustomersModel.channel == info.channel).first()
-            if not customer:
-                raise HTTPException(status_code=404, detail={
-                                    'code': MSG['404']['code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
-            
-            if info.reward_id == 1:
-                # sử dụng điểm tích luỹ
-                if info.reward_value and info.reward_value > 0:
-                    if not can_redeem_reward(customer.reward_points, info.reward_value, db, RewardRedemptionsModel):
-                        raise HTTPException(status_code=400, detail={
-                            'code': MSG['400']['code'], 'message': 'Bạn không đủ điểm thưởng để đổi phần thưởng này, hãy kiểm tra lại điểm thưởng hiện có'})
-
-                    description = 'Sử dụng điểm tích luỹ để mua sản phẩm'
-                    # tạo redeem
-                    
-                    
-                    new_points = decrease_points(db, CustomersModel, info.customer_id, info.reward_value)
-                    new_redeem = RewardRedemptionsModel(customer_id=info.customer_id, total_points_used=info.reward_value,
-                                            status=REWARD_REDEMPTION_STATUS_MAPPING['SUCCESS'], description=description, reward_id=info.reward_id, 
-                                            channel=info.channel, code=tracking_code, balance_after=new_points)
-                    new_transaction = RewardTransactionsModel(customer_id=info.customer_id, transaction_type=REWARD_TRANSACTION_TYPE_MAPPING['REDEEM'],
-                                                            point=info.reward_value, balance_after=new_points, reference_type=REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING['REDEEM'], 
-                                                            reference_id=None, description=description, transaction_code=tracking_code,
-                                                            channel=info.channel)
-                    db.add(new_redeem)
-                    db.add(new_transaction)
-        else:
-            if info.reward_id:
+        if info.tracking_code.isdigit():
+            tracking_code = format_code(info.tracking_code, str(CUSTOMER_CHANNEL[info.channel].get('code')).upper(), 1)
+            if not tracking_code:
                 raise HTTPException(status_code=400, detail={
-                            'code': MSG['400']['code'], 'message': 'Bạn chưa đăng nhập, không thể sử dụng điểm thưởng'})
-                
-            phone = normalize_phone_lib(info.receiver_phone)
+                                        'code': MSG['404']['code'], 'message': 'Lỗi sinh mã đơn hàng'})
+        else:
+            tracking_code = info.tracking_code
             
-            # check customer, nếu chưa có thì tạo tài khoản
-            customer = db.query(CustomersModel).filter(CustomersModel.phone == phone, CustomersModel.channel == info.channel).first()
-            if customer:
-                # đã có tài khoản
-                customer_id = customer.id
+        #check tracking_code đã tồn tại hay chưa
+        order = db.query(OrdersModel).filter(OrdersModel.tracking_code == tracking_code, OrdersModel.channel == info.channel).first()
+        if order:
+            # Đã tồn tại
+            if info.receiver_name and (info.receiver_name != order.receiver_name):
+                order.receiver_name = info.receiver_name
+            
+            if info.receiver_phone and (info.receiver_phone != order.receiver_phone):
+                order.receiver_phone = info.receiver_phone
+                
+            if info.receiver_email and (info.receiver_email != order.receiver_email):
+                order.receiver_email = info.receiver_email
+            
+            if info.receiver_province_code and (info.receiver_province_code != order.receiver_province_code):
+                order.receiver_province_code = info.receiver_province_code
+                
+            if info.receiver_commune_code and (info.receiver_commune_code != order.receiver_commune_code):
+                order.receiver_commune_code = info.receiver_commune_code
+                
+            if info.receiver_address and (info.receiver_address != order.receiver_address):
+                order.receiver_address = info.receiver_address
+                
+            if info.description and (info.description != order.description):
+                order.description = info.description
+                
+            if info.money_collect != order.money_collect:
+                order.money_collect = info.money_collect
+                
+            if info.total_freight and (info.total_freight != order.total_freight):
+                order.total_freight = info.total_freight
+                
+            if info.carrier_code and (info.carrier_code != order.carrier_code):
+                order.carrier_code = info.carrier_code
+                
+            if info.carrier_tracking_code and (info.carrier_tracking_code != order.carrier_tracking_code):
+                order.carrier_tracking_code = info.carrier_tracking_code
+        else:
+            # Chưa tồn tại
+            customer_id = 0
+            if info.customer_id:
+                customer_id = info.customer_id
+                # có truyền id khách hàng => check tồn tại
+                customer = db.query(CustomersModel).filter(
+                    CustomersModel.id == info.customer_id, CustomersModel.channel == info.channel).first()
+                if not customer:
+                    raise HTTPException(status_code=404, detail={
+                                        'code': MSG['404']['code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
+                
+                if info.reward_id == 1:
+                    # sử dụng điểm tích luỹ
+                    if info.reward_value and info.reward_value > 0:
+                        if not can_redeem_reward(customer.reward_points, info.reward_value, db, RewardRedemptionsModel):
+                            raise HTTPException(status_code=400, detail={
+                                'code': MSG['400']['code'], 'message': 'Bạn không đủ điểm thưởng để đổi phần thưởng này, hãy kiểm tra lại điểm thưởng hiện có'})
+
+                        description = 'Sử dụng điểm tích luỹ để mua sản phẩm'
+                        # tạo redeem
+                        
+                        
+                        new_points = decrease_points(db, CustomersModel, info.customer_id, info.reward_value)
+                        new_redeem = RewardRedemptionsModel(customer_id=info.customer_id, total_points_used=info.reward_value,
+                                                status=REWARD_REDEMPTION_STATUS_MAPPING['SUCCESS'], description=description, reward_id=info.reward_id, 
+                                                channel=info.channel, code=tracking_code, balance_after=new_points)
+                        new_transaction = RewardTransactionsModel(customer_id=info.customer_id, transaction_type=REWARD_TRANSACTION_TYPE_MAPPING['REDEEM'],
+                                                                point=info.reward_value, balance_after=new_points, reference_type=REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING['REDEEM'], 
+                                                                reference_id=None, description=description, transaction_code=tracking_code,
+                                                                channel=info.channel)
+                        db.add(new_redeem)
+                        db.add(new_transaction)
             else:
-                # chưa có tài khoản
-                new_customer = CustomersModel(
-                    fullname=info.receiver_name, phone=phone, channel=info.channel, status=True, reward_points=0)
-                db.add(new_customer)
-                db.commit()
-                db.refresh(new_customer)
-                customer_id = new_customer.id
+                if info.reward_id:
+                    raise HTTPException(status_code=400, detail={
+                                'code': MSG['400']['code'], 'message': 'Bạn chưa đăng nhập, không thể sử dụng điểm thưởng'})
+                    
+                phone = normalize_phone_lib(info.receiver_phone)
                 
-        items = None
-        if info.items:
-            items = [item.model_dump() for item in info.items]
+                # check customer, nếu chưa có thì tạo tài khoản
+                customer = db.query(CustomersModel).filter(CustomersModel.phone == phone, CustomersModel.channel == info.channel).first()
+                if customer:
+                    # đã có tài khoản
+                    customer_id = customer.id
+                else:
+                    # chưa có tài khoản
+                    new_customer = CustomersModel(
+                        fullname=info.receiver_name, phone=phone, channel=info.channel, status=True, reward_points=0)
+                    db.add(new_customer)
+                    db.commit()
+                    db.refresh(new_customer)
+                    customer_id = new_customer.id
+                    
+            items = None
+            if info.items:
+                items = [item.model_dump() for item in info.items]
+                
+            new_order = OrdersModel(tracking_code=tracking_code, customer_id=customer_id, receiver_name=info.receiver_name, receiver_phone=info.receiver_phone,
+                                    receiver_email=info.receiver_email, receiver_province_code=info.receiver_province_code, channel=info.channel, 
+                                    receiver_commune_code=info.receiver_commune_code, receiver_address=info.receiver_address, description=info.description,
+                                    status=1, money_collect=info.money_collect, total_amount=info.money_collect, total_freight=info.total_freight, items=items,
+                                    delivery_method=info.delivery_method, pickup_scheduled_at=info.pickup_scheduled_at, reward_value=info.reward_value, reward_id=info.reward_id,
+                                    year_month=get_n_months_ago(0), datecreated=get_n_days_ago(0), last_accessed_at=datetime.now(timezone.utc))
+            db.add(new_order)
             
-        new_order = OrdersModel(tracking_code=tracking_code, customer_id=customer_id, receiver_name=info.receiver_name, receiver_phone=info.receiver_phone,
-                                receiver_email=info.receiver_email, receiver_province_code=info.receiver_province_code, channel=info.channel, 
-                                receiver_commune_code=info.receiver_commune_code, receiver_address=info.receiver_address, description=info.description,
-                                status=1, money_collect=info.money_collect, total_amount=info.money_collect, total_freight=info.total_freight, items=items,
-                                delivery_method=info.delivery_method, pickup_scheduled_at=info.pickup_scheduled_at, reward_value=info.reward_value, reward_id=info.reward_id,
-                                year_month=get_n_months_ago(0), datecreated=get_n_days_ago(0), last_accessed_at=datetime.now(timezone.utc))
-        db.add(new_order)
         db.commit()
-        
         resp = {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': tracking_code}
         log_event(db_logs, OrderLogModel, {'customer_id': info.customer_id, 'tracking_code': tracking_code, 'channel': info.channel, 'input': info.model_dump(mode="json"), 'output': resp})
         return resp
