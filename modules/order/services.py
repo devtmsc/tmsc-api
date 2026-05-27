@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db, get_logs_master_db
 from app.fastcore.common.constant import MSG
 from app.modules.common.constant import CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING, ORDER_FINAL_STATUSES, ORDER_SUCCESS_STATUSES, ORDER_RETURNED_STATUSES, ORDER_IGNORED_STATUSES, ORDER_CANCELLED_STATUSES
-from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago, is_datetime
+from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago, is_datetime, has_special_char
 from app.fastcore.user.auth_with_api_key import verify_api_key
 from app.modules.common.utility import can_redeem_reward, decrease_points, normalize_phone_lib, increase_points, calculate_reward_points
 from .models import OrdersModel, OrderLogModel, OrderStatusLogModel
@@ -52,14 +52,26 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
         order = db.query(OrdersModel).filter(OrdersModel.tracking_code == tracking_code, OrdersModel.channel == info.channel).first()
         if order:
             # Đã tồn tại
-            if info.receiver_name and (info.receiver_name != order.receiver_name):
-                order.receiver_name = info.receiver_name
-            
-            if info.receiver_phone and (info.receiver_phone != order.receiver_phone):
-                order.receiver_phone = info.receiver_phone
-                
-            if info.receiver_email and (info.receiver_email != order.receiver_email):
-                order.receiver_email = info.receiver_email
+            if info.receiver_name:
+                if has_special_char(info.receiver_name):
+                    if not order.receiver_name:
+                        order.receiver_name = info.receiver_name
+                elif info.receiver_name != order.receiver_name:
+                    order.receiver_name = info.receiver_name
+                    
+            if info.receiver_phone:
+                if has_special_char(info.receiver_phone):
+                    if not order.receiver_phone:
+                        order.receiver_phone = info.receiver_phone
+                elif info.receiver_phone != order.receiver_phone:
+                    order.receiver_phone = info.receiver_phone
+                    
+            if info.receiver_email:
+                if has_special_char(info.receiver_email):
+                    if not order.receiver_email:
+                        order.receiver_email = info.receiver_email
+                elif info.receiver_email != order.receiver_email:
+                    order.receiver_email = info.receiver_email
             
             if info.receiver_province_code and (info.receiver_province_code != order.receiver_province_code):
                 order.receiver_province_code = info.receiver_province_code
@@ -67,8 +79,12 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
             if info.receiver_commune_code and (info.receiver_commune_code != order.receiver_commune_code):
                 order.receiver_commune_code = info.receiver_commune_code
                 
-            if info.receiver_address and (info.receiver_address != order.receiver_address):
-                order.receiver_address = info.receiver_address
+            if info.receiver_address:
+                if has_special_char(info.receiver_address):
+                    if not order.receiver_address:
+                        order.receiver_address = info.receiver_address
+                elif info.receiver_address != order.receiver_address:
+                    order.receiver_address = info.receiver_address
                 
             if info.description and (info.description != order.description):
                 order.description = info.description
@@ -121,6 +137,10 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
                 if info.reward_id:
                     raise HTTPException(status_code=400, detail={
                                 'code': MSG['400']['code'], 'message': 'Bạn chưa đăng nhập, không thể sử dụng điểm thưởng'})
+                    
+                if has_special_char(info.receiver_phone):
+                    raise HTTPException(status_code=400, detail={
+                                'code': MSG['400']['code'], 'message': 'Bạn chưa đăng nhập, số điện thoại không đúng định dạng'})
                     
                 phone = normalize_phone_lib(info.receiver_phone)
                 
