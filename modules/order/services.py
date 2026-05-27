@@ -8,7 +8,7 @@ from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session, selectinload
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db, get_logs_master_db
 from app.fastcore.common.constant import MSG
-from app.modules.common.constant import CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING, ORDER_FINAL_STATUSES, ORDER_SUCCESS_STATUSES, ORDER_RETURNED_STATUSES, ORDER_IGNORED_STATUSES
+from app.modules.common.constant import CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING, ORDER_FINAL_STATUSES, ORDER_SUCCESS_STATUSES, ORDER_RETURNED_STATUSES, ORDER_IGNORED_STATUSES, ORDER_CANCELLED_STATUSES
 from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago, is_datetime
 from app.fastcore.user.auth_with_api_key import verify_api_key
 from app.modules.common.utility import can_redeem_reward, decrease_points, normalize_phone_lib
@@ -245,6 +245,26 @@ async def sync_status(tracking_code: Optional[str] = None, db: Session = Depends
                 
                 if (status not in ORDER_IGNORED_STATUSES) and (status != order.status):
                     order.status = status
+                    if status in ORDER_CANCELLED_STATUSES:
+                        order.canceled_at = datetime.now(timezone.utc)
+                        order.picked_at = None
+                        order.completed_at = None
+                        order.returned_at = None
+                    else:
+                        order.canceled_at = None
+                        if data.get('pick_date'):
+                            pick_date = is_datetime(data.get('pick_date'), '%Y-%m-%d')
+                            if pick_date:
+                                order.picked_at = pick_date
+                        if data.get('deliver_date'):
+                            deliver_date = is_datetime(data.get('deliver_date'), '%Y-%m-%d')
+                            if deliver_date:
+                                if order.status in ORDER_RETURNED_STATUSES:
+                                    order.completed_at = None
+                                    order.returned_at = deliver_date
+                                else:
+                                    order.completed_at = deliver_date
+                                    order.returned_at = None
                 
                 if order.total_freight != data.get('ship_money'):
                     order.total_freight = data.get('ship_money')
@@ -257,20 +277,6 @@ async def sync_status(tracking_code: Optional[str] = None, db: Session = Depends
                 
                 if order.total_freight != data.get('weight'):
                     order.total_freight = data.get('weight')
-                
-                if data.get('pick_date'):
-                    pick_date = is_datetime(data.get('pick_date'), '%Y-%m-%d')
-                    if pick_date:
-                        order.picked_at = pick_date
-                if data.get('deliver_date'):
-                    deliver_date = is_datetime(data.get('deliver_date'), '%Y-%m-%d')
-                    if deliver_date:
-                        if order.status in ORDER_SUCCESS_STATUSES:
-                            order.completed_at = deliver_date
-                            order.returned_at = None
-                        elif order.status in ORDER_RETURNED_STATUSES:
-                            order.completed_at = None
-                            order.returned_at = deliver_date
                         
         order.last_accessed_at = datetime.now(timezone.utc)
         db.commit()
