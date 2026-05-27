@@ -45,7 +45,9 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
             raise HTTPException(status_code=400, detail={
                                     'code': MSG['404']['code'], 'message': 'Lỗi sinh mã đơn hàng'})
         
+        customer_id = 0
         if info.customer_id:
+            customer_id = info.customer_id
             # có truyền id khách hàng => check tồn tại
             customer = db.query(CustomersModel).filter(
                 CustomersModel.id == info.customer_id, CustomersModel.channel == info.channel).first()
@@ -80,12 +82,26 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
                             'code': MSG['400']['code'], 'message': 'Bạn chưa đăng nhập, không thể sử dụng điểm thưởng'})
                 
             phone = normalize_phone_lib(info.receiver_phone)
+            
+            # check customer, nếu chưa có thì tạo tài khoản
+            customer = db.query(CustomersModel).filter(CustomersModel.phone == phone, CustomersModel.channel == info.channel).first()
+            if customer:
+                # đã có tài khoản
+                customer_id = customer.id
+            else:
+                # chưa có tài khoản
+                new_customer = CustomersModel(
+                    fullname=info.receiver_name, phone=phone, channel=info.channel, status=True, reward_points=0)
+                db.add(new_customer)
+                db.commit()
+                db.refresh(new_customer)
+                customer_id = new_customer.id
                 
         items = None
         if info.items:
             items = [item.model_dump() for item in info.items]
             
-        new_order = OrdersModel(tracking_code=tracking_code, customer_id=info.customer_id, receiver_name=info.receiver_name, receiver_phone=info.receiver_phone,
+        new_order = OrdersModel(tracking_code=tracking_code, customer_id=customer_id, receiver_name=info.receiver_name, receiver_phone=info.receiver_phone,
                                 receiver_email=info.receiver_email, receiver_province_code=info.receiver_province_code, channel=info.channel, 
                                 receiver_commune_code=info.receiver_commune_code, receiver_address=info.receiver_address, description=info.description,
                                 status=1, money_collect=info.money_collect, total_amount=info.money_collect, total_freight=info.total_freight, items=items,
