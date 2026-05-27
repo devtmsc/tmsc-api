@@ -16,7 +16,7 @@ class OrderItemsSchema(DRFStyleBaseModel):
     
 class OrderCreateSchema(DRFStyleBaseModel):
     channel: int = DRFIntField('channel', required=True)
-    tracking_code: int = DRFIntField('tracking_code', required=True)
+    tracking_code: str = DRFCharField('tracking_code', required=True, blank=False, max_length=50)
     customer_id: Optional[int] = DRFIntField('customer_id', required=False)
     receiver_name: str = DRFCharField('receiver_name', max_length=255, required=True, blank=False)
     receiver_phone: str = DRFCharField('receiver_phone', max_length=50, required=True, blank=False)
