@@ -1,5 +1,5 @@
 import math
-import requests
+from datetime import datetime, timezone
 import httpx
 from app.config import settings
 from typing import Optional
@@ -11,7 +11,7 @@ from app.fastcore.common.constant import MSG
 from app.modules.common.constant import CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING, ORDER_FINAL_STATUSES, ORDER_SUCCESS_STATUSES, ORDER_RETURNED_STATUSES, ORDER_IGNORED_STATUSES
 from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago, is_datetime
 from app.fastcore.user.auth_with_api_key import verify_api_key
-from app.modules.common.utility import can_redeem_reward, decrease_points
+from app.modules.common.utility import can_redeem_reward, decrease_points, normalize_phone_lib
 from .models import OrdersModel, OrderLogModel, OrderStatusLogModel
 from app.modules.customer.models import CustomersModel, RewardRedemptionsModel, RewardTransactionsModel
 from app.modules.common.caches import CategoryCommuneCache, CategoryOrderStatusCache, CategoryOrderStatusMappingCache, CategoryOrderPartnerCache
@@ -74,7 +74,13 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
                                                             channel=info.channel)
                     db.add(new_redeem)
                     db.add(new_transaction)
-        
+        else:
+            if info.reward_id:
+                raise HTTPException(status_code=400, detail={
+                            'code': MSG['400']['code'], 'message': 'Bạn chưa đăng nhập, không thể sử dụng điểm thưởng'})
+                
+            phone = normalize_phone_lib(info.receiver_phone)
+                
         items = None
         if info.items:
             items = [item.model_dump() for item in info.items]
@@ -84,7 +90,7 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
                                 receiver_commune_code=info.receiver_commune_code, receiver_address=info.receiver_address, description=info.description,
                                 status=1, money_collect=info.money_collect, total_amount=info.money_collect, total_freight=info.total_freight, items=items,
                                 delivery_method=info.delivery_method, pickup_scheduled_at=info.pickup_scheduled_at, reward_value=info.reward_value, reward_id=info.reward_id,
-                                year_month=get_n_months_ago(0), datecreated=get_n_days_ago(0))
+                                year_month=get_n_months_ago(0), datecreated=get_n_days_ago(0), last_accessed_at=datetime.now(timezone.utc))
         db.add(new_order)
         db.commit()
         
@@ -250,7 +256,7 @@ async def sync_status(tracking_code: Optional[str] = None, db: Session = Depends
                             order.completed_at = None
                             order.returned_at = deliver_date
                         
-        order.last_accessed_at = get_n_days_ago(0)
+        order.last_accessed_at = datetime.now(timezone.utc)
         db.commit()
         
         return {'code': MSG['200']['code'], 'message': f'Thành công - {order.tracking_code}'}
