@@ -38,7 +38,7 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
     try:
         channel_cache = channel_cache().get()
         
-        if info.channel not in channel_cache:
+        if str(info.channel) not in channel_cache:
             raise HTTPException(status_code=422, detail={
                                     'code': MSG['422']['code'], 'message': 'Channel không hợp lệ'})
         
