@@ -51,8 +51,8 @@ class CategoryChannelCache(CustomCache):
         self.db = db
 
     def data(self):
-        db_data = self.db.query(ChannelModel.id, ChannelModel.name).all()
-        return {row[0]: {'id': row[0], 'name': row[1]} for row in db_data}
+        db_data = self.db.query(ChannelModel.id, ChannelModel.name, ChannelModel.code).all()
+        return {row[0]: {'id': row[0], 'name': row[1], 'code': row[2]} for row in db_data}
     
 
 class CategoryOrderPartnerCache(CustomCache):

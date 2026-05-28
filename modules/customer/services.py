@@ -11,7 +11,7 @@ from app.fastcore.user.auth_with_api_key import verify_api_key
 from .models import CustomersModel, SocialCustomersModel, RewardRedemptionsModel, RewardTransactionsModel, RewardsModel, LoyaltyConfigsModel
 from .serializers import CustomerSerializer, RewardRedemptionsSerializer, RewardTransactionSerializer
 from app.fastcore.common.serializers import ListSerializer
-from app.modules.common.caches import CategoryCommuneCache
+from app.modules.common.caches import CategoryCommuneCache, CategoryChannelCache
 from app.modules.common.constant import REWARD_REDEMPTION_STATUS_MAPPING
 from . import schemas
 
@@ -42,7 +42,7 @@ def create(info: schemas.CustomerCreateSchema, db: Session = Depends(get_custome
 
 
 @router.post("/login", name="view")
-def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer_master_db), api_key: str = Depends(verify_api_key), commune_cache: CategoryCommuneCache = Depends(CategoryCommuneCache)):
+def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer_master_db), api_key: str = Depends(verify_api_key), commune_cache: CategoryCommuneCache = Depends(CategoryCommuneCache), channel_cache: CategoryChannelCache = Depends(CategoryChannelCache)):
     try:
         if (info.provider == 0) and not info.customer_id:
             raise HTTPException(status_code=422, detail={
@@ -169,7 +169,7 @@ def create(info: schemas.CustomerLoginSchema, db: Session = Depends(get_customer
         customer_data = db.query(CustomersModel).filter(
             CustomersModel.id == customer.id).options(selectinload(CustomersModel.social)).all()
 
-        data = CustomerSerializer.serialize_list(customer_data, context={'commune_cache': commune_cache},
+        data = CustomerSerializer.serialize_list(customer_data, context={'commune_cache': commune_cache, 'channel_cache': channel_cache},
                                                  fields=['id', 'fullname', 'phone', 'email', 'address', 'province_code', 'commune_code', 'status',
                                                          'birthday', 'avatar_url', 'channel', 'channel_name', 'commune_name', 'province_name',
                                                          'created_time', 'created_time_ago', 'birthday', 'reward_points', 'social'])
@@ -201,14 +201,14 @@ def delete_social(info: schemas.SocialCustomerDeleteSchema, db: Session = Depend
 
 
 @router.get("/info", name="view")
-def create(info: schemas.CustomerInfoSchema, db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key), commune_cache: CategoryCommuneCache = Depends(CategoryCommuneCache)):
+def create(info: schemas.CustomerInfoSchema, db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key), commune_cache: CategoryCommuneCache = Depends(CategoryCommuneCache), channel_cache: CategoryChannelCache = Depends(CategoryChannelCache)):
     try:
         customer_data = db.query(CustomersModel).filter(CustomersModel.id == info.customer_id, CustomersModel.channel == info.channel).options(selectinload(CustomersModel.social)).all()
         if not customer_data:
             raise HTTPException(status_code=404, detail={
                                     'code': MSG['404']['code'], 'message': 'Mã tài khoản khách hàng không tồn tại'})
 
-        data = CustomerSerializer.serialize_list(customer_data, context={'commune_cache': commune_cache},
+        data = CustomerSerializer.serialize_list(customer_data, context={'commune_cache': commune_cache, 'channel_cache': channel_cache},
                                                  fields=['id', 'fullname', 'phone', 'email', 'address', 'province_code', 'commune_code', 'status',
                                                          'birthday', 'avatar_url', 'channel', 'channel_name', 'commune_name', 'province_name',
                                                          'created_time', 'created_time_ago', 'birthday', 'reward_points', 'social'])

@@ -111,3 +111,5 @@ def calculate_reward_points(total_amount, money_unit_step, points_reward_step):
             return 0
     return int((total_amount / money_unit_step) * points_reward_step)
 
+
+

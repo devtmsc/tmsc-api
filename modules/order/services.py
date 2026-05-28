@@ -8,13 +8,13 @@ from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session, selectinload
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db, get_logs_master_db
 from app.fastcore.common.constant import MSG
-from app.modules.common.constant import CUSTOMER_CHANNEL, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING, ORDER_FINAL_STATUSES, ORDER_SUCCESS_STATUSES, ORDER_RETURNED_STATUSES, ORDER_IGNORED_STATUSES, ORDER_CANCELLED_STATUSES
+from app.modules.common.constant import REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING, ORDER_FINAL_STATUSES, ORDER_SUCCESS_STATUSES, ORDER_RETURNED_STATUSES, ORDER_IGNORED_STATUSES, ORDER_CANCELLED_STATUSES
 from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago, is_datetime, has_special_char
 from app.fastcore.user.auth_with_api_key import verify_api_key
 from app.modules.common.utility import can_redeem_reward, decrease_points, normalize_phone_lib, increase_points, calculate_reward_points
 from .models import OrdersModel, OrderLogModel, OrderStatusLogModel
 from app.modules.customer.models import CustomersModel, RewardRedemptionsModel, RewardTransactionsModel, LoyaltyConfigsModel
-from app.modules.common.caches import CategoryCommuneCache, CategoryOrderStatusCache, CategoryOrderStatusMappingCache, CategoryOrderPartnerCache
+from app.modules.common.caches import CategoryCommuneCache, CategoryOrderStatusCache, CategoryOrderStatusMappingCache, CategoryOrderPartnerCache, CategoryChannelCache
 from .serializers import OrderSerializer
 from . import schemas
 
@@ -34,14 +34,16 @@ def status_list(status_cache: CategoryOrderStatusCache = Depends(CategoryOrderSt
         
 
 @router.post("/create", name="create")
-def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_master_db), db_logs: Session = Depends(get_logs_master_db), api_key: str = Depends(verify_api_key),):
+def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_master_db), db_logs: Session = Depends(get_logs_master_db), api_key: str = Depends(verify_api_key), channel_cache: CategoryChannelCache = Depends(CategoryChannelCache)):
     try:
-        if info.channel not in CUSTOMER_CHANNEL:
+        channel_cache = channel_cache().get()
+        
+        if info.channel not in channel_cache:
             raise HTTPException(status_code=422, detail={
                                     'code': MSG['422']['code'], 'message': 'Channel không hợp lệ'})
         
         if str(info.tracking_code).isdigit():
-            tracking_code = format_code(int(info.tracking_code), str(CUSTOMER_CHANNEL[info.channel].get('code')).upper(), 1)
+            tracking_code = format_code(int(info.tracking_code), str(channel_cache[info.channel].get('code')).upper(), 1)
             if not tracking_code:
                 raise HTTPException(status_code=400, detail={
                                         'code': MSG['404']['code'], 'message': 'Lỗi sinh mã đơn hàng'})
@@ -200,7 +202,7 @@ def order_filter(request:Request, filter: schemas.OrderListSchema):
 
 
 @router.get("/list", name="list")
-def get_list(request: Request, filter: schemas.OrderListSchema = Depends(), db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key), commune_cache: CategoryCommuneCache = Depends(CategoryCommuneCache), order_status_cache: CategoryOrderStatusCache = Depends(CategoryOrderStatusCache), order_partner_cache: CategoryOrderPartnerCache = Depends(CategoryOrderPartnerCache)):
+def get_list(request: Request, filter: schemas.OrderListSchema = Depends(), db: Session = Depends(get_customer_replica_db), api_key: str = Depends(verify_api_key), commune_cache: CategoryCommuneCache = Depends(CategoryCommuneCache), order_status_cache: CategoryOrderStatusCache = Depends(CategoryOrderStatusCache), order_partner_cache: CategoryOrderPartnerCache = Depends(CategoryOrderPartnerCache), channel_cache: CategoryChannelCache = Depends(CategoryChannelCache)):
     try:
         conditions = order_filter(request, filter)
         
@@ -213,7 +215,7 @@ def get_list(request: Request, filter: schemas.OrderListSchema = Depends(), db: 
         data = query.order_by(OrdersModel.created_at.desc()).offset((filter.page - 1) * filter.page_size).limit(filter.page_size).all()
 
         return {'code': MSG['200']['code'], 'message': MSG['200']['message'],
-                "data": OrderSerializer.serialize_list(data, context={'commune_cache': commune_cache, 'order_status_cache': order_status_cache, 'order_partner_cache': order_partner_cache}),
+                "data": OrderSerializer.serialize_list(data, context={'commune_cache': commune_cache, 'order_status_cache': order_status_cache, 'order_partner_cache': order_partner_cache, 'channel_cache': channel_cache}),
                 "pagination": {
                     "page": filter.page,
                     "limit": filter.page_size,
