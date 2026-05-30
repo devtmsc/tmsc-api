@@ -136,7 +136,7 @@ def send_order_telegram(info, tracking_code, channel_name):
         f"<b>🚚 Vận chuyển</b>\n"
         f"Kênh: {channel_name}\n"
         f"Hình thức: {delivery_method_name}\n"
-        f"Lịch lấy: {info.pickup_scheduled_at}\n\n"
+        f"Lịch lấy: {info.pickup_scheduled_at | ''}\n\n"
 
         f"<b>📦 Sản phẩm</b>\n"
     )
