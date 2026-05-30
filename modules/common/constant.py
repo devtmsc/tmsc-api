@@ -1,6 +1,9 @@
 from app.config import settings
 
-CONFIG = {}
+CONFIG = {
+    'BOT_TOKEN': "8858659686:AAEP9WJ-KzKpRgyEJFNAACYDuHXKNEByjfQ",
+    'ORDER_CHAT_ID': "-1003665874080"
+}
 
 ORDER_FINAL_STATUSES = [8, 11, 12]
 ORDER_SUCCESS_STATUSES = [8]
@@ -9,8 +12,8 @@ ORDER_CANCELLED_STATUSES = [12]
 ORDER_IGNORED_STATUSES = [20]
 
 DELIVERY_METHOD = {
-    1: {'id': 1, 'name': 'Giao hàng tận nhà'},
-    2: {'id': 2, 'name': 'Lấy hàng tại công ty'}
+    1: {'id': 1, 'name': 'Lấy hàng tại công ty'},
+    2: {'id': 2, 'name': 'Giao hàng tận nhà'}
 }
 
 REWARD_REDEMPTION_STATUS = {

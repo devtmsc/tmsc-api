@@ -1,6 +1,7 @@
+import requests
 from sqlalchemy import func, update
 from fastapi import HTTPException
-from app.fastcore.common.constant import MSG
+from app.modules.common.constant import CONFIG, DELIVERY_METHOD
 
 
 def normalize_phone_lib(phone: str) -> str:
@@ -112,4 +113,47 @@ def calculate_reward_points(total_amount, money_unit_step, points_reward_step):
     return int((total_amount / money_unit_step) * points_reward_step)
 
 
+def format_money(v):
+    return f"{v:,.0f}".replace(",", ".")
 
+
+def send_order_telegram(info, tracking_code, channel_name):
+    delivery_method_name = 'Giao hàng tại địa chỉ'
+    if info.delivery_method in DELIVERY_METHOD:
+        delivery_method_name = DELIVERY_METHOD[info.delivery_method].get('name')
+    
+    msg = (
+        f"<b>🛒 Đơn hàng mới</b>\n"
+        f"Mã đơn: <code>{tracking_code}</code>\n"
+        f"Tổng tiền: <b>{format_money(info.money_collect)} đ</b>\n\n"
+
+        f"<b>👤 Thông tin khách hàng</b>\n"
+        f"Tên: {info.receiver_name}\n"
+        f"SĐT: <code>{info.receiver_phone}</code>\n"
+        f"Email: {info.receiver_email}\n"
+        f"Địa chỉ: {info.receiver_address}\n\n"
+
+        f"<b>🚚 Vận chuyển</b>\n"
+        f"Kênh: {channel_name}\n"
+        f"Hình thức: {delivery_method_name}\n"
+        f"Lịch lấy: {info.pickup_scheduled_at}\n\n"
+
+        f"<b>📦 Sản phẩm</b>\n"
+    )
+
+    # loop items
+    if info.items:
+        for i, item in enumerate(info.items, 1):
+            msg += (
+                f"{i}. {item.name}\n"
+                f"   SL: {item.quantity} | "
+                f"Giá: {format_money(item.total)} đ\n"
+            )
+    
+    url = f"https://api.telegram.org/bot{CONFIG['BOT_TOKEN']}/sendMessage"
+    payload = {
+        "chat_id": CONFIG['ORDER_CHAT_ID'],
+        "text": msg,
+        "parse_mode": "HTML"
+    }
+    requests.post(url, json=payload, timeout=10)

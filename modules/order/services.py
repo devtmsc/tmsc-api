@@ -1,4 +1,5 @@
 import math
+import requests
 from datetime import datetime, timezone
 import httpx
 from app.config import settings
@@ -8,10 +9,10 @@ from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session, selectinload
 from app.modules.common.session import get_customer_master_db, get_customer_replica_db, get_logs_master_db
 from app.fastcore.common.constant import MSG
-from app.modules.common.constant import REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING, ORDER_FINAL_STATUSES, ORDER_SUCCESS_STATUSES, ORDER_RETURNED_STATUSES, ORDER_IGNORED_STATUSES, ORDER_CANCELLED_STATUSES
-from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago, is_datetime, has_special_char
+from app.modules.common.constant import CONFIG, REWARD_REDEMPTION_STATUS_MAPPING, REWARD_TRANSACTION_TYPE_MAPPING, REWARD_TRANSACTION_REFERENCE_TYPE_MAPPING, ORDER_FINAL_STATUSES, ORDER_SUCCESS_STATUSES, ORDER_RETURNED_STATUSES, ORDER_IGNORED_STATUSES, ORDER_CANCELLED_STATUSES
+from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago, is_datetime, has_special_char, get_value_from_dict
 from app.fastcore.user.auth_with_api_key import verify_api_key
-from app.modules.common.utility import can_redeem_reward, decrease_points, normalize_phone_lib, increase_points, calculate_reward_points
+from app.modules.common.utility import can_redeem_reward, decrease_points, normalize_phone_lib, increase_points, calculate_reward_points, send_order_telegram
 from .models import OrdersModel, OrderLogModel, OrderStatusLogModel
 from app.modules.customer.models import CustomersModel, RewardRedemptionsModel, RewardTransactionsModel, LoyaltyConfigsModel
 from app.modules.common.caches import CategoryCommuneCache, CategoryOrderStatusCache, CategoryOrderStatusMappingCache, CategoryOrderPartnerCache, CategoryChannelCache
@@ -19,7 +20,7 @@ from .serializers import OrderSerializer
 from . import schemas
 
 router = APIRouter()
-
+    
 
 @router.get("/status", name="list")
 def status_list(status_cache: CategoryOrderStatusCache = Depends(CategoryOrderStatusCache)):
@@ -103,6 +104,8 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
                 
             if info.carrier_tracking_code and (info.carrier_tracking_code != order.carrier_tracking_code):
                 order.carrier_tracking_code = info.carrier_tracking_code
+                
+            db.commit()
         else:
             # Chưa tồn tại
             customer_id = 0
@@ -172,8 +175,15 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
                                     delivery_method=info.delivery_method, pickup_scheduled_at=info.pickup_scheduled_at, reward_value=info.reward_value, reward_id=info.reward_id,
                                     year_month=get_n_months_ago(0), datecreated=get_n_days_ago(0), last_accessed_at=datetime.now(timezone.utc))
             db.add(new_order)
+            db.commit()
             
-        db.commit()
+            # send msg
+            try:
+                channel_name = get_value_from_dict(channel_cache, channel, default={}).get('name', '')
+                send_order_telegram(info, tracking_code, channel_name)
+            except Exception as e:
+                1
+        
         resp = {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': tracking_code}
         log_event(db_logs, OrderLogModel, {'customer_id': info.customer_id, 'tracking_code': tracking_code, 'channel': info.channel, 'input': info.model_dump(mode="json"), 'output': resp})
         return resp
@@ -330,17 +340,17 @@ async def sync_status(tracking_code: Optional[str] = None, db: Session = Depends
                                     order.completed_at = deliver_date
                                     order.returned_at = None
                 
-                if order.total_freight != data.get('ship_money'):
+                if data.get('ship_money') and (order.total_freight != data.get('ship_money')):
                     order.total_freight = data.get('ship_money')
                 
-                if order.money_collect != data.get('pick_money'):
+                if data.get('pick_money') and (order.money_collect != data.get('pick_money')):
                     order.money_collect = data.get('pick_money')
                     
-                if order.total_amount != data.get('value'):
+                if data.get('value') and (order.total_amount != data.get('value')):
                     order.total_amount = data.get('value')
                 
-                if order.total_freight != data.get('weight'):
-                    order.total_freight = data.get('weight')
+                if data.get('weight') and (order.total_weight != data.get('weight')):
+                    order.total_weight = data.get('weight')
                         
         order.last_accessed_at = datetime.now(timezone.utc)
         db.commit()

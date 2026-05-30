@@ -65,6 +65,7 @@ class OrdersModel(SoftDeleteMixin, Base):
     money_collect: Mapped[int] = mapped_column(Integer)
     total_freight: Mapped[int] = mapped_column(Integer)
     total_amount: Mapped[int] = mapped_column(Integer)
+    total_weight: Mapped[int] = mapped_column(Integer)
     reward_id: Mapped[int] = mapped_column(Integer)
     reward_value: Mapped[int] = mapped_column(Integer)
     channel: Mapped[str] = mapped_column(String(100))
