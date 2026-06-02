@@ -13,7 +13,7 @@ from app.modules.common.constant import CONFIG, REWARD_REDEMPTION_STATUS_MAPPING
 from app.fastcore.common.utility import log_event, get_n_months_ago, format_code, to_end_of_day, get_n_days_ago, is_datetime, has_special_char, get_value_from_dict
 from app.fastcore.user.auth_with_api_key import verify_api_key
 from app.modules.common.utility import can_redeem_reward, decrease_points, normalize_phone_lib, increase_points, calculate_reward_points, send_order_telegram
-from .models import OrdersModel, OrderLogModel, OrderStatusLogModel
+from .models import OrdersModel, OrderLogModel, OrderStatusLogModel, OrderHistoriesModel
 from app.modules.customer.models import CustomersModel, RewardRedemptionsModel, RewardTransactionsModel, LoyaltyConfigsModel
 from app.modules.common.caches import CategoryCommuneCache, CategoryOrderStatusCache, CategoryOrderStatusMappingCache, CategoryOrderPartnerCache, CategoryChannelCache
 from .serializers import OrderSerializer
@@ -186,6 +186,58 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
         
         resp = {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': tracking_code}
         log_event(db_logs, OrderLogModel, {'customer_id': info.customer_id, 'tracking_code': tracking_code, 'channel': info.channel, 'input': info.model_dump(mode="json"), 'output': resp})
+        return resp
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={
+                            'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+
+
+@router.post("/update", name="update")
+def update(info: schemas.OrderUpdateSchema, db: Session = Depends(get_customer_master_db), db_logs: Session = Depends(get_logs_master_db), api_key: str = Depends(verify_api_key)):
+    try:
+        #check tracking_code đã tồn tại hay chưa
+        order = db.query(OrdersModel).filter(OrdersModel.tracking_code == info.tracking_code).first()
+        if not order:
+            raise HTTPException(status_code=404, detail={
+                                'code': MSG['404']['code'], 'message': 'Đơn hàng không tồn tại'})
+        
+        if order.is_rewarded and (order.is_rewarded != 0):
+            raise HTTPException(status_code=400, detail={
+                                'code': MSG['400']['code'], 'message': 'Đơn hàng đã được tích điểm thưởng, không thể cập nhật'})
+        
+        history_data = []
+        
+        if info.carrier_tracking_code and (info.carrier_tracking_code != order.carrier_tracking_code):
+            history_data.append(
+                    {'code': 'carrier_tracking_code', 'before_data': info.carrier_tracking_code, 'after_data': order.carrier_tracking_code})
+            order.carrier_tracking_code = info.carrier_tracking_code
+                
+        if info.status and (info.status != order.status):
+            history_data.append({'code': 'status', 'before_data': info.status, 'after_data': order.status})
+            order.status = info.status
+                
+        if info.carrier_code and (info.carrier_code != order.carrier_code):
+            history_data.append({'code': 'carrier_code', 'before_data': info.carrier_code, 'after_data': order.carrier_code})
+            order.carrier_code = info.carrier_code
+                
+        if info.total_amount != order.total_amount:
+            history_data.append({'code': 'total_amount', 'before_data': info.total_amount, 'after_data': order.total_amount})
+            order.total_amount = info.total_amount
+                
+        if info.total_freight != order.total_freight:
+            history_data.append({'code': 'total_freight', 'before_data': info.total_freight, 'after_data': order.total_freight})
+            order.total_freight = info.total_freight
+                
+        if info.money_collect != order.money_collect:
+            history_data.append({'code': 'money_collect', 'before_data': info.money_collect, 'after_data': order.money_collect})
+            order.money_collect = info.money_collect
+        
+        db.commit()
+        
+        resp = {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': info.tracking_code}
+        log_event(db_logs, OrderHistoriesModel, {'user_id': 1, 'order_id': order.id, 'action': 'update', 'data': history_data})
         return resp
     except HTTPException as e:
         raise e

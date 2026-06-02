@@ -34,6 +34,16 @@ class OrderCreateSchema(DRFStyleBaseModel):
     pickup_scheduled_at: Optional[datetime] = DRFDateTimeField('pickup_scheduled_at', required=False)
     carrier_code: Optional[str] = DRFCharField('carrier_code', max_length=10, required=False, blank=True)
     carrier_tracking_code: Optional[str] = DRFCharField('carrier_tracking_code', max_length=100, required=False, blank=True)
+    
+
+class OrderUpdateSchema(DRFStyleBaseModel):
+    tracking_code: str = DRFCharField('tracking_code', required=True, blank=False, max_length=50)
+    carrier_tracking_code: Optional[str] = DRFCharField('carrier_tracking_code', max_length=100, required=False, blank=True)
+    status: int = DRFIntField('status', required=False)
+    carrier_code: Optional[str] = DRFCharField('carrier_code', max_length=10, required=False, blank=True)
+    total_amount: int = DRFIntField('total_amount', required=False)
+    total_freight: int = DRFIntField('total_freight', required=False)
+    money_collect: int = DRFIntField('money_collect', required=True)    
 
 
 class OrderListSchema(DRFStyleBaseModel):

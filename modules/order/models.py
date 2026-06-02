@@ -25,6 +25,22 @@ class OrderLogModel(Base):
     model_config = {
         "from_attributes": True
     }
+
+
+class OrderHistoriesModel(Base):
+    __tablename__ = "order_histories"
+    __table_args__ = {"schema": "logs"}
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer)
+    order_id: Mapped[int] = mapped_column(Integer)
+    action: Mapped[str] = mapped_column(String(50))
+    data: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
+    model_config = {
+        "from_attributes": True
+    }
     
 
 class OrderStatusLogModel(Base):
