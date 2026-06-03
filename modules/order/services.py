@@ -173,7 +173,7 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
                                     receiver_commune_code=info.receiver_commune_code, receiver_address=info.receiver_address, description=info.description,
                                     status=1, money_collect=info.money_collect, total_amount=info.money_collect, total_freight=info.total_freight, items=items,
                                     delivery_method=info.delivery_method, pickup_scheduled_at=info.pickup_scheduled_at, reward_value=info.reward_value, reward_id=info.reward_id,
-                                    sub_status=1, source_id=0, year_month=get_n_months_ago(0), datecreated=get_n_days_ago(0), last_accessed_at=datetime.now(timezone.utc))
+                                    sub_status=1, source_id=1000, year_month=get_n_months_ago(0), datecreated=get_n_days_ago(0), last_accessed_at=datetime.now(timezone.utc))
             db.add(new_order)
             db.commit()
             
