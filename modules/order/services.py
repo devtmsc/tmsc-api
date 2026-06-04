@@ -211,27 +211,27 @@ def update(info: schemas.OrderUpdateSchema, db: Session = Depends(get_customer_m
         
         if info.carrier_tracking_code and (info.carrier_tracking_code != order.carrier_tracking_code):
             history_data.append(
-                    {'code': 'carrier_tracking_code', 'before_data': info.carrier_tracking_code, 'after_data': order.carrier_tracking_code})
+                    {'code': 'carrier_tracking_code', 'after_data': info.carrier_tracking_code, 'before_data': order.carrier_tracking_code})
             order.carrier_tracking_code = info.carrier_tracking_code
                 
         if info.status and (info.status != order.status):
-            history_data.append({'code': 'status', 'before_data': info.status, 'after_data': order.status})
+            history_data.append({'code': 'status', 'after_data': info.status, 'before_data': order.status})
             order.status = info.status
                 
         if info.carrier_code and (info.carrier_code != order.carrier_code):
-            history_data.append({'code': 'carrier_code', 'before_data': info.carrier_code, 'after_data': order.carrier_code})
+            history_data.append({'code': 'carrier_code', 'after_data': info.carrier_code, 'before_data': order.carrier_code})
             order.carrier_code = info.carrier_code
                 
         if info.total_amount != order.total_amount:
-            history_data.append({'code': 'total_amount', 'before_data': info.total_amount, 'after_data': order.total_amount})
+            history_data.append({'code': 'total_amount', 'after_data': info.total_amount, 'before_data': order.total_amount})
             order.total_amount = info.total_amount
                 
         if info.total_freight != order.total_freight:
-            history_data.append({'code': 'total_freight', 'before_data': info.total_freight, 'after_data': order.total_freight})
+            history_data.append({'code': 'total_freight', 'after_data': info.total_freight, 'before_data': order.total_freight})
             order.total_freight = info.total_freight
                 
         if info.money_collect != order.money_collect:
-            history_data.append({'code': 'money_collect', 'before_data': info.money_collect, 'after_data': order.money_collect})
+            history_data.append({'code': 'money_collect', 'after_data': info.money_collect, 'before_data': order.money_collect})
             order.money_collect = info.money_collect
             
         items = {}
