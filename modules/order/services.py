@@ -215,7 +215,26 @@ def update(info: schemas.OrderUpdateSchema, db: Session = Depends(get_customer_m
             order.carrier_tracking_code = info.carrier_tracking_code
                 
         if info.status and (info.status != order.status):
+            current_time = datetime.now()
             history_data.append({'code': 'status', 'after_data': info.status, 'before_data': order.status})
+            if info.status in ORDER_SUCCESS_STATUSES:
+                order.completed_at = current_time
+                order.returned_at = None
+                order.canceled_at = None
+                order.canceled_by = None
+                order.cancel_reason = None
+            elif info.status in ORDER_RETURNED_STATUSES:
+                order.completed_at = None
+                order.returned_at = current_time
+                order.canceled_at = None
+                order.canceled_by = None
+                order.cancel_reason = None
+            elif info.status in ORDER_CANCELLED_STATUSES:
+                order.completed_at = None
+                order.returned_at = None
+                order.canceled_at = current_time
+                order.canceled_by = 1
+            
             order.status = info.status
                 
         if info.carrier_code and (info.carrier_code != order.carrier_code):
