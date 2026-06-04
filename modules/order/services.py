@@ -234,31 +234,28 @@ def update(info: schemas.OrderUpdateSchema, db: Session = Depends(get_customer_m
             history_data.append({'code': 'money_collect', 'after_data': info.money_collect, 'before_data': order.money_collect})
             order.money_collect = info.money_collect
             
+        old_items = {}
         items = {}
         if order.items:
             for item in order.items:
                 product_id = item.get('product_id')
                 if product_id:
-                    items[product_id] = item
+                    old_items[product_id] = item
         
         if info.items:
             for item in info.items:
                 if item.product_id:
-                    if item.product_id in items:
-                        if item.name:
-                            items[item.product_id]['name'] = item.name
-                        if item.quantity:
-                            items[item.product_id]['quantity'] = item.quantity
-                        if item.subtotal:
-                            items[item.product_id]['subtotal'] = item.subtotal
-                        if item.subtotal_tax:
-                            items[item.product_id]['subtotal_tax'] = item.subtotal_tax
-                        if item.total:
-                            items[item.product_id]['total'] = item.total
-                        if item.total_tax:
-                            items[item.product_id]['total_tax'] = item.total_tax
-                        if item.image_url:
-                            items[item.product_id]['image_url'] = item.image_url
+                    if item.product_id in old_items:
+                        items[item.product_id] = {
+                            'product_id': item.product_id,
+                            'name': item.name if item.name else old_items[item.product_id].get('name'),
+                            'quantity': item.quantity if item.quantity else old_items[item.product_id].get('quantity'),
+                            'subtotal': item.subtotal if (item.subtotal or (item.subtotal == 0)) else old_items[item.product_id].get('subtotal'),
+                            'subtotal_tax': item.subtotal_tax if (item.subtotal_tax or (item.subtotal_tax == 0)) else old_items[item.product_id].get('subtotal_tax'),
+                            'total': item.total if (item.total or (item.total == 0)) else old_items[item.product_id].get('total'),
+                            'total_tax': item.total_tax if (item.total_tax or (item.total_tax == 0)) else old_items[item.product_id].get('total_tax'),
+                            'image_url': item.image_url if item.image_url else old_items[item.product_id].get('image_url'),
+                        }
                     else:
                         items[item.product_id] = {
                             'product_id': item.product_id,
