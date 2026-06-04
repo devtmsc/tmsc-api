@@ -36,6 +36,17 @@ class OrderCreateSchema(DRFStyleBaseModel):
     carrier_tracking_code: Optional[str] = DRFCharField('carrier_tracking_code', max_length=100, required=False, blank=True)
     
 
+class OrderItemsUpdateSchema(DRFStyleBaseModel):
+    product_id: Optional[int] = DRFIntField('product_id', required=False)
+    name: str = DRFCharField('name', max_length=255, required=True, blank=False)
+    quantity: Optional[int] = DRFIntField('quantity', required=False, default=1)
+    subtotal: Optional[int] = DRFIntField('subtotal', required=False, default=0)
+    subtotal_tax: Optional[int] = DRFIntField('subtotal_tax', required=False, default=0)
+    total: Optional[int] = DRFIntField('total', required=False, default=0)
+    total_tax: Optional[int] = DRFIntField('total_tax', required=False, default=0)
+    image_url: Optional[str] = DRFCharField('image_url', max_length=200, required=False, blank=True)
+
+
 class OrderUpdateSchema(DRFStyleBaseModel):
     tracking_code: str = DRFCharField('tracking_code', required=True, blank=False, max_length=50)
     carrier_tracking_code: Optional[str] = DRFCharField('carrier_tracking_code', max_length=100, required=False, blank=True)
@@ -43,7 +54,8 @@ class OrderUpdateSchema(DRFStyleBaseModel):
     carrier_code: Optional[str] = DRFCharField('carrier_code', max_length=10, required=False, blank=True)
     total_amount: int = DRFIntField('total_amount', required=False)
     total_freight: int = DRFIntField('total_freight', required=False)
-    money_collect: int = DRFIntField('money_collect', required=True)    
+    money_collect: int = DRFIntField('money_collect', required=True)
+    items: Optional[list[OrderItemsUpdateSchema]] = DRFListField('items', required=False)
 
 
 class OrderListSchema(DRFStyleBaseModel):

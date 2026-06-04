@@ -233,7 +233,45 @@ def update(info: schemas.OrderUpdateSchema, db: Session = Depends(get_customer_m
         if info.money_collect != order.money_collect:
             history_data.append({'code': 'money_collect', 'before_data': info.money_collect, 'after_data': order.money_collect})
             order.money_collect = info.money_collect
+            
+        items = {}
+        if order.items:
+            for item in order.items:
+                product_id = item.get('product_id')
+                if product_id:
+                    items[product_id] = item
         
+        if info.items:
+            for item in info.items:
+                if item.product_id:
+                    if item.product_id in items:
+                        if item.name:
+                            items[item.product_id]['name'] = item.name
+                        if item.quantity:
+                            items[item.product_id]['quantity'] = item.quantity
+                        if item.subtotal:
+                            items[item.product_id]['subtotal'] = item.subtotal
+                        if item.subtotal_tax:
+                            items[item.product_id]['subtotal_tax'] = item.subtotal_tax
+                        if item.total:
+                            items[item.product_id]['total'] = item.total
+                        if item.total_tax:
+                            items[item.product_id]['total_tax'] = item.total_tax
+                        if item.image_url:
+                            items[item.product_id]['image_url'] = item.image_url
+                    else:
+                        items[item.product_id] = {
+                            'product_id': item.product_id,
+                            'name': item.name,
+                            'quantity': item.quantity,
+                            'subtotal': item.subtotal,
+                            'subtotal_tax': item.subtotal_tax,
+                            'total': item.total,
+                            'total_tax': item.total_tax,
+                            'image_url': item.image_url
+                        }
+            
+            order.items = list(items.values())
         db.commit()
         
         resp = {'code': MSG['200']['code'], 'message': MSG['200']['message'], 'data': info.tracking_code}
@@ -274,8 +312,11 @@ def get_list(request: Request, filter: schemas.OrderListSchema = Depends(), db: 
 
         query = db.query(OrdersModel).filter(*conditions)
         
+        
         total = query.count()  # tổng record
-        data = query.order_by(OrdersModel.created_at.desc()).offset((filter.page - 1) * filter.page_size).limit(filter.page_size).all()
+        data = []
+        if total > 0:
+            data = query.order_by(OrdersModel.created_at.desc()).offset((filter.page - 1) * filter.page_size).limit(filter.page_size).all()
 
         return {'code': MSG['200']['code'], 'message': MSG['200']['message'],
                 "data": OrderSerializer.serialize_list(data, context={'commune_cache': commune_cache, 'order_status_cache': order_status_cache, 'order_partner_cache': order_partner_cache, 'channel_cache': channel_cache}),

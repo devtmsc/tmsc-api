@@ -70,6 +70,7 @@ class OrdersModel(SoftDeleteMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     tracking_code: Mapped[str] = mapped_column(String(30))
     customer_id: Mapped[int] = mapped_column(Integer)
+    seller_id: Mapped[int] = mapped_column(Integer)
     receiver_name: Mapped[str] = mapped_column(String(200))
     receiver_phone: Mapped[str] = mapped_column(String(30))
     receiver_email: Mapped[str] = mapped_column(String(200))
