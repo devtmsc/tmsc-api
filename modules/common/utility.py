@@ -1,3 +1,4 @@
+import re
 import requests
 from sqlalchemy import func, update
 from fastapi import HTTPException
@@ -115,6 +116,11 @@ def calculate_reward_points(total_amount, money_unit_step, points_reward_step):
 
 def format_money(v):
     return f"{v:,.0f}".replace(",", ".")
+
+
+def is_valid_tmsc_email(email: str) -> bool:
+    pattern = r'^[a-zA-Z0-9._%+-]+@tmsc-vn\.com$'
+    return re.match(pattern, email) is not None
 
 
 def send_order_telegram(info, tracking_code, channel_name):

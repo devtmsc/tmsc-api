@@ -7,6 +7,7 @@ from app.config import settings
 from app.fastcore.common.constant import MSG
 from app.modules.common.auth_session import get_master_db
 from app.fastcore.common.utility import import_from_string
+from app.modules.common.utility import is_valid_tmsc_email
 from sqlalchemy.orm import Session
 from app.fastcore.user.auth import create_access_token, create_refresh_token
 
@@ -33,6 +34,9 @@ def auth_google(data: dict, response: Response, db: Session = Depends(get_master
 
         email = idinfo["email"]
         sub = idinfo["sub"]
+        
+        if not is_valid_tmsc_email(email):
+            raise HTTPException(status_code=400, detail={'code': MSG['400']['code'], 'message': 'Invalid email'})
         
         db_user = db.query(UserModel).filter(UserModel.email == email).first()
         if not db_user:
