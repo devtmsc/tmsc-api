@@ -70,6 +70,8 @@ def auth_google(data: dict, response: Response, db: Session = Depends(get_master
         )
         
         return {"code": MSG['200']['code'], 'message': MSG['200']['message'], "access_token": token}
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail={'code': MSG['401']['code'], 'message': "Invalid Google token"})
     except HTTPException as e:
         raise e
     except Exception as e:

@@ -31,7 +31,7 @@ app.add_middleware(
 # Thêm CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5175"],
+    allow_origins=["http://localhost:5175", "https://tms.tmsc-vn.com", "https://pos.tmsc-vn.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
