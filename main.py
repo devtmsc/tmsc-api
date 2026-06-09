@@ -11,6 +11,7 @@ from app.fastcore.common.constant import MSG
 from app.fastcore.common.middlewares import RateLimitMiddleware
 from app.modules.customer.routes import router as customer_router
 from app.modules.order.routes import router as order_router
+from app.modules.auth.routes import router as auth_router
 
 
 app = FastAPI()
@@ -62,6 +63,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 app.include_router(customer_router, prefix='/customer')
 app.include_router(order_router, prefix='/order')
+app.include_router(auth_router, prefix='/auth')
 
 # In tất cả route sau khi app khởi tạo
 @app.get("/routes")

@@ -4,6 +4,8 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     APP_NAME: str
     DEBUG: bool
+    AUTH_MASTER_DATABASE_URL: str
+    AUTH_REPLICATE_DATABASE_URL: str
     MASTER_DATABASE_URL: str
     REPLICATE_DATABASE_URL: str
     DATABASE_SEARCH_PATH: str
@@ -37,6 +39,8 @@ class Settings(BaseSettings):
     GHTK_URL: str
     GHTK_TOKEN: str
     GHTK_X_CLIENT_SOURCE: str
+    
+    GOOGLE_CLIENT_ID: str
 
     class Config:
         env_file = "app/.env"
