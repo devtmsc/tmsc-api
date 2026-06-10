@@ -6,7 +6,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 from pathlib import Path
 from app.config import settings
-from app.fastcore.user.auth import authentication, get_user_from_token
+from app.fastcore.user.auth import get_user_from_token
 from app.fastcore.common.constant import MSG
 from app.fastcore.common.middlewares import RateLimitMiddleware
 from app.modules.customer.routes import router as customer_router

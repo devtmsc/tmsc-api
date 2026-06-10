@@ -59,8 +59,8 @@ def auth_google(data: dict, response: Response, db: Session = Depends(get_auth_m
             if not db_user.google_sub or (db_user.google_sub != sub):
                 db_user.google_sub = sub
 
-        token = create_access_token({'uuid': db_user.id, "sub": db_user.email, 'email': db_user.email, 'phone': db_user.phone, 'fullname': db_user.fullname, 'department': db_user.department, 'position': db_user.position})
-        refresh_token = create_refresh_token({'uuid': db_user.id, "sub": db_user.email, 'email': db_user.email, 'phone': db_user.phone, 'fullname': db_user.fullname, 'department': db_user.department, 'position': db_user.position})
+        token = create_access_token({'uuid': db_user.id, "sub": db_user.email, 'email': db_user.email, 'phone': db_user.phone, 'fullname': db_user.fullname, 'department': db_user.department, 'position': db_user.position, 'avatar': db_user.avatar})
+        refresh_token = create_refresh_token({'uuid': db_user.id, "sub": db_user.email, 'email': db_user.email, 'phone': db_user.phone, 'fullname': db_user.fullname, 'department': db_user.department, 'position': db_user.position, 'avatar': db_user.avatar})
 
         response.set_cookie(
             key="refresh_token",
@@ -68,7 +68,7 @@ def auth_google(data: dict, response: Response, db: Session = Depends(get_auth_m
             httponly=True,
             secure=True,
             samesite="none",
-            domain=".example.com",
+            domain=".tmsc-vn.com",
             max_age=7 * 24 * 3600
         )
         
