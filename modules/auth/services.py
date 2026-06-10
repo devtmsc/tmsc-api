@@ -5,18 +5,17 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 from app.config import settings
 from app.fastcore.common.constant import MSG
-from app.modules.common.auth_session import get_master_db
-from app.fastcore.common.utility import import_from_string
+from app.fastcore.db.auth_session import get_auth_master_db
+from app.fastcore.user.models import User
 from app.modules.common.utility import is_valid_tmsc_email
 from sqlalchemy.orm import Session
 from app.fastcore.user.auth import create_access_token, create_refresh_token
 
 router = APIRouter()
-UserModel = import_from_string(settings.USER_MODEL_PATH)
     
 
-@router.post("/google", name="list")
-def auth_google(data: dict, response: Response, db: Session = Depends(get_master_db)):
+@router.post("/google", name="view")
+def auth_google(data: dict, response: Response, db: Session = Depends(get_auth_master_db)):
     try:
         token = data.get("token")
         if not token:
@@ -38,9 +37,9 @@ def auth_google(data: dict, response: Response, db: Session = Depends(get_master
         if not is_valid_tmsc_email(email):
             raise HTTPException(status_code=400, detail={'code': MSG['400']['code'], 'message': 'Invalid email'})
         
-        db_user = db.query(UserModel).filter(UserModel.email == email).first()
+        db_user = db.query(User).filter(User.email == email).first()
         if not db_user:
-            db_user = UserModel(email=email, phone=None, fullname=idinfo['name'], avatar=idinfo['picture'],
+            db_user = User(email=email, phone=None, fullname=idinfo['name'], avatar=idinfo['picture'],
                              is_active=1, department=None, position=1, google_sub=sub, last_login_at=datetime.now(),
                              created_at=datetime.now())
             db.add(db_user)
