@@ -117,6 +117,20 @@ def refresh(request: Request, response: Response):
                             detail={'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
     
 
-    
+@router.post("/logout", name="view")
+def logout(response: Response):
+    try:
+        response.delete_cookie(
+            key="refresh_token",
+            domain=".tmsc-vn.com"
+        )
+        return {"code": MSG['200']['code'], 'message': MSG['200']['message']}
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail={'code': MSG['401']['code'], 'message': "Invalid Refresh token"})
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500,
+                            detail={'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
 
     
