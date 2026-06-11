@@ -10,6 +10,7 @@ from app.fastcore.user.models import BaseUser
 from app.modules.common.utility import is_valid_tmsc_email
 from sqlalchemy.orm import Session
 from app.fastcore.user.auth import create_access_token, create_refresh_token, verify_token
+from app.modules.auth.schemas import TokenRefreshRequest
 
 router = APIRouter()
     
@@ -74,14 +75,9 @@ def auth_google(data: dict, response: Response, db: Session = Depends(get_auth_m
 
 
 @router.post("/refresh", name="view")
-def refresh(request: Request, response: Response):
+def refresh(token: TokenRefreshRequest, request: Request, response: Response):
     try:
-        refresh_token = request.cookies.get("refresh_token")
-        
-        if not refresh_token:
-            raise HTTPException(status_code=400, detail="No refresh token")
-        
-        payload = verify_token(refresh_token, 'Refresh')
+        payload = verify_token(token.refresh_token, 'Refresh')
 
         # new token
         new_access_token = create_access_token(payload)
