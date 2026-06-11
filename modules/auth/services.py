@@ -47,8 +47,8 @@ def auth_google(data: dict, response: Response, db: Session = Depends(get_auth_m
             db.refresh(db_user)
         else:
             if db_user.is_active != 1:
-                raise HTTPException(status_code=401,
-                            detail={'code': MSG['401']['code'], 'message': MSG['401']['message']})
+                raise HTTPException(status_code=400,
+                            detail={'code': MSG['400']['code'], 'message': MSG['400']['message']})
             
             if not db_user.avatar and idinfo['picture']:
                 db_user.avatar = idinfo['picture']
@@ -74,7 +74,7 @@ def auth_google(data: dict, response: Response, db: Session = Depends(get_auth_m
         
         return {"code": MSG['200']['code'], 'message': MSG['200']['message'], "access_token": token}
     except ValueError as e:
-        raise HTTPException(status_code=401, detail={'code': MSG['401']['code'], 'message': "Invalid Google token"})
+        raise HTTPException(status_code=400, detail={'code': MSG['400']['code'], 'message': "Invalid Google token"})
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -89,7 +89,7 @@ def refresh(request: Request, response: Response):
         refresh_token = request.cookies.get("refresh_token")
         
         if not refresh_token:
-            raise HTTPException(status_code=401, detail="No refresh token")
+            raise HTTPException(status_code=400, detail="No refresh token")
         
         payload = verify_token(refresh_token, 'Refresh')
 
@@ -109,7 +109,7 @@ def refresh(request: Request, response: Response):
 
         return {"code": MSG['200']['code'], 'message': MSG['200']['message'], "access_token": new_access_token}
     except ValueError as e:
-        raise HTTPException(status_code=401, detail={'code': MSG['401']['code'], 'message': "Invalid Refresh token"})
+        raise HTTPException(status_code=400, detail={'code': MSG['400']['code'], 'message': "Invalid Refresh token"})
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -126,11 +126,9 @@ def logout(response: Response):
         )
         return {"code": MSG['200']['code'], 'message': MSG['200']['message']}
     except ValueError as e:
-        raise HTTPException(status_code=401, detail={'code': MSG['401']['code'], 'message': "Invalid Refresh token"})
+        raise HTTPException(status_code=400, detail={'code': MSG['400']['code'], 'message': "Invalid Refresh token"})
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=500,
                             detail={'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
-
-    
