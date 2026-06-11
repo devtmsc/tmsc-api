@@ -1,6 +1,6 @@
 import requests
 from datetime import datetime
-from fastapi import APIRouter, Response, HTTPException, Depends
+from fastapi import APIRouter, Response, HTTPException, Depends, Request
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from app.config import settings
@@ -9,7 +9,7 @@ from app.fastcore.db.auth_session import get_auth_master_db
 from app.fastcore.user.models import BaseUser
 from app.modules.common.utility import is_valid_tmsc_email
 from sqlalchemy.orm import Session
-from app.fastcore.user.auth import create_access_token, create_refresh_token
+from app.fastcore.user.auth import create_access_token, create_refresh_token, verify_token
 
 router = APIRouter()
     
@@ -80,3 +80,43 @@ def auth_google(data: dict, response: Response, db: Session = Depends(get_auth_m
     except Exception as e:
         raise HTTPException(status_code=500,
                             detail={'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+
+
+
+@router.post("/refresh", name="view")
+def refresh(request: Request, response: Response):
+    try:
+        refresh_token = request.cookies.get("refresh_token")
+        
+        if not refresh_token:
+            raise HTTPException(status_code=401, detail="No refresh token")
+        
+        payload = verify_token(refresh_token, 'Refresh')
+
+        # new token
+        new_access_token = create_access_token(payload)
+        new_refresh_token = create_refresh_token(payload)
+        
+        response.set_cookie(
+            key="refresh_token",
+            value=new_refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            domain=".tmsc-vn.com",
+            max_age=7 * 24 * 3600
+        )
+
+        return {"code": MSG['200']['code'], 'message': MSG['200']['message'], "access_token": new_access_token}
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail={'code': MSG['401']['code'], 'message': "Invalid Refresh token"})
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500,
+                            detail={'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
+    
+
+    
+
+    
