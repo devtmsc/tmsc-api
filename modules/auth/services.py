@@ -61,18 +61,8 @@ def auth_google(data: dict, response: Response, db: Session = Depends(get_auth_m
 
         token = create_access_token({'uuid': db_user.id, "sub": db_user.email, 'email': db_user.email, 'phone': db_user.phone, 'fullname': db_user.fullname, 'department': db_user.department, 'position': db_user.position, 'avatar': db_user.avatar})
         refresh_token = create_refresh_token({'uuid': db_user.id, "sub": db_user.email, 'email': db_user.email, 'phone': db_user.phone, 'fullname': db_user.fullname, 'department': db_user.department, 'position': db_user.position, 'avatar': db_user.avatar})
-
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            secure=True,
-            samesite="none",
-            domain=".tmsc-vn.com",
-            max_age=7 * 24 * 3600
-        )
         
-        return {"code": MSG['200']['code'], 'message': MSG['200']['message'], "access_token": token}
+        return {"code": MSG['200']['code'], 'message': MSG['200']['message'], "access_token": token, 'refresh_token': refresh_token}
     except ValueError as e:
         raise HTTPException(status_code=400, detail={'code': MSG['400']['code'], 'message': "Invalid Google token"})
     except HTTPException as e:
@@ -96,35 +86,8 @@ def refresh(request: Request, response: Response):
         # new token
         new_access_token = create_access_token(payload)
         new_refresh_token = create_refresh_token(payload)
-        
-        response.set_cookie(
-            key="refresh_token",
-            value=new_refresh_token,
-            httponly=True,
-            secure=True,
-            samesite="none",
-            domain=".tmsc-vn.com",
-            max_age=7 * 24 * 3600
-        )
 
-        return {"code": MSG['200']['code'], 'message': MSG['200']['message'], "access_token": new_access_token}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail={'code': MSG['400']['code'], 'message': "Invalid Refresh token"})
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=500,
-                            detail={'code': MSG['500']['code'], 'message': MSG['500']['message'], 'system_message': str(e)})
-    
-
-@router.post("/logout", name="view")
-def logout(response: Response):
-    try:
-        response.delete_cookie(
-            key="refresh_token",
-            domain=".tmsc-vn.com"
-        )
-        return {"code": MSG['200']['code'], 'message': MSG['200']['message']}
+        return {"code": MSG['200']['code'], 'message': MSG['200']['message'], "access_token": new_access_token, 'refresh_token': new_refresh_token}
     except ValueError as e:
         raise HTTPException(status_code=400, detail={'code': MSG['400']['code'], 'message': "Invalid Refresh token"})
     except HTTPException as e:
