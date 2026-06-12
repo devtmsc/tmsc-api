@@ -9,7 +9,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(100))
     role_id = Column(Integer)
+    last_activity = Column(DateTime)
     created_at = Column(DateTime)
+    updated_at = Column(DateTime)
 
     model_config = {
         "from_attributes": True
