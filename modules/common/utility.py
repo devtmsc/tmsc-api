@@ -108,10 +108,11 @@ def decrease_stock(db, model, reward_id: int, amount: int):
     return new_points
 
 
-def calculate_reward_points(total_amount, money_unit_step, points_reward_step):
+def calculate_reward_points(total_amount, money_unit_step, points_reward_step, multiplier=1):
     if money_unit_step <= 0:
             return 0
-    return int((total_amount / money_unit_step) * points_reward_step)
+    base_point = (total_amount / money_unit_step) * points_reward_step
+    return int(base_point * multiplier)
 
 
 def format_money(v):

@@ -14,7 +14,7 @@ from app.fastcore.common.utility import log_event, get_n_months_ago, format_code
 from app.fastcore.user.auth_with_api_key import verify_api_key
 from app.modules.common.utility import can_redeem_reward, decrease_points, normalize_phone_lib, increase_points, calculate_reward_points, send_order_telegram
 from .models import OrdersModel, OrderLogModel, OrderStatusLogModel, OrderHistoriesModel
-from app.modules.customer.models import CustomersModel, RewardRedemptionsModel, RewardTransactionsModel, LoyaltyConfigsModel
+from app.modules.customer.models import CustomersModel, RewardRedemptionsModel, RewardTransactionsModel, LoyaltyConfigsModel, LoyaltyDoubleRewardPeriodsModel
 from app.modules.common.caches import CategoryCommuneCache, CategoryOrderStatusCache, CategoryOrderStatusMappingCache, CategoryOrderPartnerCache, CategoryChannelCache
 from .serializers import OrderSerializer
 from . import schemas
@@ -485,14 +485,28 @@ async def process_order_reward(tracking_code: Optional[str] = None, db: Session 
             return {'code': MSG['200']['code'], 'message': 'Đã xử lý hết'}
 
         if order.total_amount and order.total_amount > 0:
-            description = f'Thưởng điểm tích luỹ khi mua đơn hàng {order.tracking_code}'
-            
+            # Kiểm tra đơn có nằm trong đợt thưởng điểm xN không (tính theo ngày đặt hàng)
+            order_date = order.datecreated.date() if order.datecreated else None
+            double_period = None
+            if order_date:
+                double_period = db.query(LoyaltyDoubleRewardPeriodsModel).filter(
+                    LoyaltyDoubleRewardPeriodsModel.status == True,
+                    LoyaltyDoubleRewardPeriodsModel.start_date <= order_date,
+                    LoyaltyDoubleRewardPeriodsModel.end_date >= order_date,
+                ).first()
+
+            multiplier = float(double_period.multiplier) if double_period else 1
+            if double_period and multiplier != 1:
+                description = f'Thưởng {multiplier}x điểm tích luỹ đơn hàng {order.tracking_code} - {double_period.description or "đợt khuyến mãi"}'
+            else:
+                description = f'Thưởng điểm tích luỹ đơn hàng {order.tracking_code}'
+
             loyalty_configs = db.query(LoyaltyConfigsModel).filter(LoyaltyConfigsModel.status == True).first()
             if not loyalty_configs:
                 raise HTTPException(status_code=400, detail={
                                         'code': MSG['400']['code'], 'message': 'Cấu hình đổi điểm không tồn tại'})
-            
-            point = calculate_reward_points(order.total_amount, loyalty_configs.money_unit_step, loyalty_configs.points_reward_step)
+
+            point = calculate_reward_points(order.total_amount, loyalty_configs.money_unit_step, loyalty_configs.points_reward_step, multiplier=multiplier)
             
             # tạo redeem
             new_points = increase_points(db, CustomersModel, order.customer_id, point)
