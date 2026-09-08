@@ -149,20 +149,21 @@ def create(info: schemas.OrderCreateSchema, db: Session = Depends(get_customer_m
                                 'code': MSG['400']['code'], 'message': 'Bạn chưa đăng nhập, số điện thoại không đúng định dạng'})
                     
                 phone = normalize_phone_lib(info.receiver_phone)
-                
-                # check customer, nếu chưa có thì tạo tài khoản
-                customer = db.query(CustomersModel).filter(CustomersModel.phone == phone, CustomersModel.channel == info.channel).first()
-                if customer:
-                    # đã có tài khoản
-                    customer_id = customer.id
-                else:
-                    # chưa có tài khoản
-                    new_customer = CustomersModel(
-                        fullname=info.receiver_name, phone=phone, channel=info.channel, status=True, reward_points=0)
-                    db.add(new_customer)
-                    db.commit()
-                    db.refresh(new_customer)
-                    customer_id = new_customer.id
+                customer_id = 0
+                if info.channel == 1:
+                    # check customer, nếu chưa có thì tạo tài khoản
+                    customer = db.query(CustomersModel).filter(CustomersModel.phone == phone, CustomersModel.channel == info.channel).first()
+                    if customer:
+                        # đã có tài khoản
+                        customer_id = customer.id
+                    else:
+                        # chưa có tài khoản
+                        new_customer = CustomersModel(
+                            fullname=info.receiver_name, phone=phone, channel=info.channel, status=True, reward_points=0)
+                        db.add(new_customer)
+                        db.commit()
+                        db.refresh(new_customer)
+                        customer_id = new_customer.id
                     
             items = None
             if info.items:
