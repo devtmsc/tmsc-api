@@ -1,10 +1,10 @@
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy import String, DateTime, Integer, Text, ForeignKey, DateTime, func, desc, asc, and_, Boolean
+from sqlalchemy import String, DateTime, Integer, Numeric, Text, ForeignKey, Date, DateTime, func, desc, asc, and_, Boolean
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from typing import List
 from app.fastcore.db.base import Base
 from app.fastcore.db.soft_delete import SoftDeleteMixin
-from datetime import datetime
+from datetime import datetime, date
 
 
 class Base(DeclarativeBase):
@@ -137,7 +137,7 @@ class RewardTransactionsModel(Base):
 class LoyaltyConfigsModel(SoftDeleteMixin, Base):
     __tablename__ = "loyalty_configs"
     __table_args__ = {"schema": "customer"}
-    
+
     id: Mapped[int] = mapped_column(primary_key=True)
     money_unit_step: Mapped[int] = mapped_column(Integer)
     points_reward_step: Mapped[int] = mapped_column(Integer)
@@ -148,7 +148,29 @@ class LoyaltyConfigsModel(SoftDeleteMixin, Base):
     meta: Mapped[dict] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class LoyaltyDoubleRewardPeriodsModel(SoftDeleteMixin, Base):
+    """
+    Cấu hình các đợt thưởng điểm x2/x3/... cho khách hàng.
+    Đơn hàng được đặt trong khoảng [start_date, end_date] sẽ được nhân điểm với `multiplier`.
+    """
+    __tablename__ = "loyalty_double_reward_periods"
+    __table_args__ = {"schema": "category"}
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    multiplier: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=2)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    status: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
     model_config = {
         "from_attributes": True
     }
