@@ -476,7 +476,7 @@ async def sync_status(tracking_code: Optional[str] = None, db: Session = Depends
 @router.get("/process-order-reward")
 async def process_order_reward(tracking_code: Optional[str] = None, db: Session = Depends(get_customer_replica_db), order_status_mapping_cache: CategoryOrderStatusMappingCache = Depends(CategoryOrderStatusMappingCache)):
     try:
-        conditions = [OrdersModel.datecreated >= get_n_days_ago(90), OrdersModel.status.in_(ORDER_SUCCESS_STATUSES), OrdersModel.is_rewarded == 0, OrdersModel.completed_at < get_n_days_ago(2), OrdersModel.customer_id > 0]
+        conditions = [OrdersModel.datecreated >= get_n_days_ago(90), OrdersModel.status.in_(ORDER_SUCCESS_STATUSES), OrdersModel.is_rewarded == 0, OrdersModel.completed_at < get_n_days_ago(2), OrdersModel.customer_id > 0, OrdersModel.channel == 1]
         if tracking_code:
             conditions.append(OrdersModel.tracking_code==tracking_code)
         
