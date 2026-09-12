@@ -486,7 +486,15 @@ async def process_order_reward(tracking_code: Optional[str] = None, db: Session 
 
         if order.total_amount and order.total_amount > 0:
             # Kiểm tra đơn có nằm trong đợt thưởng điểm xN không (tính theo ngày đặt hàng)
-            order_date = order.datecreated.date() if order.datecreated else None
+            # datecreated có thể là int (20260908) hoặc datetime
+            order_date = None
+            if order.datecreated:
+                if isinstance(order.datecreated, int) or (isinstance(order.datecreated, str) and order.datecreated.isdigit()):
+                    date_str = str(order.datecreated)
+                    if len(date_str) == 8:
+                        order_date = datetime.strptime(date_str, '%Y%m%d').date()
+                else:
+                    order_date = order.datecreated.date()
             double_period = None
             if order_date:
                 double_period = db.query(LoyaltyDoubleRewardPeriodsModel).filter(
